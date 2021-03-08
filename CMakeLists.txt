@@ -1607,6 +1607,18 @@ add_executable(indi_arduinost4 ${arduinost4_SRC})
 target_link_libraries(indi_arduinost4 indidriver)
 install(TARGETS indi_arduinost4 RUNTIME DESTINATION bin)
 
+########### Watec Remote Driver ###############
+
+SET(watec_remote_SRC ${CMAKE_CURRENT_SOURCE_DIR}/drivers/auxiliary/watec_remote.cpp)
+
+IF (UNITY_BUILD)
+    ENABLE_UNITY_BUILD(watec_remote watec_remote_SRC 10 cpp)
+ENDIF ()
+
+add_executable(indi_watec_remote ${watec_remote_SRC})
+target_link_libraries(indi_watec_remote indidriver)
+install(TARGETS indi_watec_remote RUNTIME DESTINATION bin)
+
 ########### PlaneWave Delta-T Driver ###############
 
 SET(planewave_deltat_SRC ${CMAKE_CURRENT_SOURCE_DIR}/drivers/auxiliary/planewave_delta.cpp)

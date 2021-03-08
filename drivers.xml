@@ -559,6 +559,10 @@
             <driver name="Arduino ST4">indi_arduinost4</driver>
             <version>1.0</version>
         </device>
+        <device label="Watec Remote" manufacturer="ASTRO.SK">
+            <driver name="Watec Remote">indi_watec_remote</driver>
+            <version>1.1</version>
+        </device>
         <device label="GPUSB">
             <driver name="GPUSB">indi_gpusb</driver>
             <version>0.1</version>
