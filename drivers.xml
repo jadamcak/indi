@@ -563,6 +563,10 @@
             <driver name="Watec Remote">indi_watec_remote</driver>
             <version>1.1</version>
         </device>
+        <device label="Netio" manufacturer="ASTRO.SK">
+            <driver name="Netio">indi_netio</driver>
+            <version>1.0</version>
+        </device>
         <device label="GPUSB">
             <driver name="GPUSB">indi_gpusb</driver>
             <version>0.1</version>

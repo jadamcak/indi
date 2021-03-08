@@ -1619,6 +1619,18 @@ add_executable(indi_watec_remote ${watec_remote_SRC})
 target_link_libraries(indi_watec_remote indidriver)
 install(TARGETS indi_watec_remote RUNTIME DESTINATION bin)
 
+########### Netio Driver ###############
+
+SET(netio_SRC ${CMAKE_CURRENT_SOURCE_DIR}/drivers/auxiliary/netio.cpp)
+
+IF (UNITY_BUILD)
+    ENABLE_UNITY_BUILD(netio netio_SRC 10 cpp)
+ENDIF ()
+
+add_executable(indi_netio ${netio_SRC})
+target_link_libraries(indi_netio indidriver)
+install(TARGETS indi_netio RUNTIME DESTINATION bin)
+
 ########### PlaneWave Delta-T Driver ###############
 
 SET(planewave_deltat_SRC ${CMAKE_CURRENT_SOURCE_DIR}/drivers/auxiliary/planewave_delta.cpp)
