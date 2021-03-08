@@ -1394,6 +1394,15 @@ add_executable(indi_domepro2_dome ${domepro2_SRC})
 target_link_libraries(indi_domepro2_dome indidriver)
 install(TARGETS indi_domepro2_dome RUNTIME DESTINATION bin)
 
+################ Shelyak Dome Tracker ##$##############
+
+SET(shelyakdt_SRC
+    ${CMAKE_CURRENT_SOURCE_DIR}/drivers/dome/shelyak_dome_tracker.cpp)
+
+add_executable(indi_shelyak_dt ${shelyakdt_SRC})
+target_link_libraries(indi_shelyak_dt indidriver)
+install(TARGETS indi_shelyak_dt RUNTIME DESTINATION bin)
+
 ################ Rigel Dome ################
 
 SET(rigeldome_SRC

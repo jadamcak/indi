@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright(c) 2021 Jan Adamcak. All rights reserved.
+  Copyright(c) 2021 J.Adamcak for astro.sk. All rights reserved.
 
   NETIO Driver. Based on Arduino ST4 Driver by Jasem Mutlaq
 
