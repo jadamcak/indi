@@ -1640,6 +1640,18 @@ add_executable(indi_netio ${netio_SRC})
 target_link_libraries(indi_netio indidriver)
 install(TARGETS indi_netio RUNTIME DESTINATION bin)
 
+########### Astelco Driver ###############
+
+SET(astelco_SRC ${CMAKE_CURRENT_SOURCE_DIR}/drivers/auxiliary/astelco.cpp)
+
+IF (UNITY_BUILD)
+    ENABLE_UNITY_BUILD(astelco astelco_SRC 10 cpp)
+ENDIF ()
+
+add_executable(indi_astelco ${astelco_SRC})
+target_link_libraries(indi_astelco indidriver)
+install(TARGETS indi_astelco RUNTIME DESTINATION bin)
+
 ########### PlaneWave Delta-T Driver ###############
 
 SET(planewave_deltat_SRC ${CMAKE_CURRENT_SOURCE_DIR}/drivers/auxiliary/planewave_delta.cpp)
