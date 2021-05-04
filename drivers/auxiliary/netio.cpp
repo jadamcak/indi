@@ -98,21 +98,25 @@ bool Netio::initProperties()
 
     setDriverInterface(AUX_INTERFACE);
 
+    IUFillTextVector(&NameS1TP, NameS1T, 1, getDeviceName(), "SOCKET 1 NAME", "Socket 1 Name", "SOCKETS", IP_RW, 0, IPS_IDLE);
     IUFillSwitch(&Socket1S[OFF], "OFF", "OFF", ISS_OFF);    
     IUFillSwitch(&Socket1S[ON], "ON", "ON", ISS_OFF);
     IUFillSwitchVector(&Socket1SP, Socket1S, 2, getDeviceName(), "SOCKET 1", "Socket 1", 
                         "SOCKETS", IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
+    IUFillTextVector(&NameS2TP, NameS2T, 1, getDeviceName(), "SOCKET 2 NAME", "Socket 2 Name", "SOCKETS", IP_RW, 0, IPS_IDLE);
     IUFillSwitch(&Socket2S[OFF], "OFF", "OFF", ISS_OFF);    
     IUFillSwitch(&Socket2S[ON], "ON", "ON", ISS_OFF);
     IUFillSwitchVector(&Socket2SP, Socket2S, 2, getDeviceName(), "SOCKET 2", "Socket 2", 
                         "SOCKETS", IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
+    IUFillTextVector(&NameS3TP, NameS3T, 1, getDeviceName(), "SOCKET 3 NAME", "Socket 3 Name", "SOCKETS", IP_RW, 0, IPS_IDLE);
     IUFillSwitch(&Socket3S[OFF], "OFF", "OFF", ISS_OFF);    
     IUFillSwitch(&Socket3S[ON], "ON", "ON", ISS_OFF);
     IUFillSwitchVector(&Socket3SP, Socket3S, 2, getDeviceName(), "SOCKET 3", "Socket 3", 
                         "SOCKETS", IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
+    IUFillTextVector(&NameS4TP, NameS4T, 1, getDeviceName(), "SOCKET 4 NAME", "Socket 4 Name", "SOCKETS", IP_RW, 0, IPS_IDLE);
     IUFillSwitch(&Socket4S[OFF], "OFF", "OFF", ISS_OFF);    
     IUFillSwitch(&Socket4S[ON], "ON", "ON", ISS_OFF);
-    IUFillSwitchVector(&Socket4SP, Socket4S, 2, getDeviceName(), "SOCKET 4", "S4ocket 4", 
+    IUFillSwitchVector(&Socket4SP, Socket4S, 2, getDeviceName(), "SOCKET 4", "Socket 4", 
                         "SOCKETS", IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
 
     IUFillTextVector(&Name1TP, Name1T, 1, getDeviceName(), "USERNAME", "Username", "Main Control", IP_RW, 0, IPS_IDLE);
@@ -122,8 +126,8 @@ bool Netio::initProperties()
     addDebugControl();
     addSimulationControl();
 
-    defineText(&Name1TP);
-    defineText(&Pass1TP);
+    defineProperty(&Name1TP);
+    defineProperty(&Pass1TP);
     
     //serialConnection = new Connection::Serial(this);
     //serialConnection->registerHandshake([&]() { return Handshake_serial(); });
@@ -141,23 +145,65 @@ bool Netio::initProperties()
     return true;
 }
 
+void Netio::ISGetProperties(const char *dev)
+{
+    INDI::DefaultDevice::ISGetProperties(dev);
+
+    defineProperty(&NameS1TP);
+    loadConfig(true, "SOCKET_1_NAME");
+    defineProperty(&Socket1SP);
+
+    defineProperty(&NameS2TP);
+    loadConfig(true, "SOCKET_2_NAME");
+    defineProperty(&Socket2SP);
+
+    defineProperty(&NameS3TP);
+    loadConfig(true, "SOCKET_3_NAME");
+    defineProperty(&Socket3SP);
+
+    defineProperty(&NameS4TP);
+    loadConfig(true, "SOCKET_4_NAME");
+    defineProperty(&Socket4SP);
+    
+}
+
+bool Netio::saveConfigItems(FILE *fp)
+{
+    INDI::DefaultDevice::saveConfigItems(fp);
+
+    IUSaveConfigText(fp, &NameS1TP);
+    IUSaveConfigText(fp, &NameS2TP);
+    IUSaveConfigText(fp, &NameS3TP);
+    IUSaveConfigText(fp, &NameS4TP);
+
+    return true;
+}
+
 bool Netio::updateProperties()
 {
     INDI::DefaultDevice::updateProperties();
 
     if (isConnected())
     {
-        defineSwitch(&Socket1SP);
-        defineSwitch(&Socket2SP);
-        defineSwitch(&Socket3SP);
-        defineSwitch(&Socket4SP);
+        defineProperty(&NameS1TP);
+        defineProperty(&Socket1SP);
+        defineProperty(&NameS2TP);
+        defineProperty(&Socket2SP);
+        defineProperty(&NameS3TP);
+        defineProperty(&Socket3SP);
+        defineProperty(&NameS4TP);
+        defineProperty(&Socket4SP);
     }
     else
     {
         deleteProperty(Socket1SP.name);      
         deleteProperty(Socket2SP.name);      
         deleteProperty(Socket3SP.name);      
-        deleteProperty(Socket4SP.name);       
+        deleteProperty(Socket4SP.name); 
+        deleteProperty(NameS1TP.name);        
+        deleteProperty(NameS2TP.name);        
+        deleteProperty(NameS3TP.name);        
+        deleteProperty(NameS4TP.name);        
         //deleteProperty(Name1TP.name);
         //deleteProperty(Pass1TP.name);
     }
@@ -379,6 +425,34 @@ bool Netio::ISNewText(const char *dev, const char *name, char *texts[], char *na
         sprintf(netioPass, "%s", texts[0]);
         IDSetText(&Pass1TP, nullptr);
     }
+    if (!strcmp(name, NameS1TP.name))
+    {
+        if (IUUpdateText(&NameS1TP, texts, names, n) < 0)
+            return false;
+        //sprintf(netioName, "%s", texts[0]);
+        IDSetText(&NameS1TP, nullptr);
+    }
+    if (!strcmp(name, NameS2TP.name))
+    {
+        if (IUUpdateText(&NameS2TP, texts, names, n) < 0)
+            return false;
+        //sprintf(netioName, "%s", texts[0]);
+        IDSetText(&NameS2TP, nullptr);
+    }
+    if (!strcmp(name, NameS3TP.name))
+    {
+        if (IUUpdateText(&NameS3TP, texts, names, n) < 0)
+            return false;
+        //sprintf(netioName, "%s", texts[0]);
+        IDSetText(&NameS3TP, nullptr);
+    }
+    if (!strcmp(name, NameS4TP.name))
+    {
+        if (IUUpdateText(&NameS4TP, texts, names, n) < 0)
+            return false;
+        //sprintf(netioName, "%s", texts[0]);
+        IDSetText(&NameS4TP, nullptr);
+    }
     return INDI::DefaultDevice::ISNewText(dev, name, texts, names, n);
 }
 
@@ -390,6 +464,9 @@ bool Netio::sendCommand(const char *cmd, char *resp)
     int tmpi = sprintf(tmp,"%s",cmd);
     tmp[tmpi-2]= '\0';
     LOGF_DEBUG("COMMAND: <%s>", tmp);
+    
+    if(PortFD == -1)
+        PortFD = tcpConnection->getPortFD();
 
     if (!isSimulation())
     {
@@ -434,6 +511,7 @@ bool Netio::sendCommand(const char *cmd){
 // Method for turning on of socket number i
 bool Netio::TurnOn(const int i)
 {
+    PortFD = tcpConnection->getPortFD(); 
     char buff[255];
     sprintf(buff, "login %s %s\r\n", netioName, netioPass);
     sendCommand(buff); 
@@ -446,6 +524,7 @@ bool Netio::TurnOn(const int i)
 // Method for turning off of socket number i
  bool Netio::TurnOff(const int i)
 {
+    PortFD = tcpConnection->getPortFD(); 
     char buff[255];
     sprintf(buff, "login %s %s\r\n", netioName, netioPass);
     sendCommand(buff); 

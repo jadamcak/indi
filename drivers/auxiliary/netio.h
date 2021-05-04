@@ -42,6 +42,7 @@ class Netio : public INDI::DefaultDevice
     Netio();
     
     virtual bool initProperties() override;
+    virtual void ISGetProperties(const char *dev) override;
     virtual bool updateProperties() override;
 
     virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)override ;
@@ -51,7 +52,7 @@ class Netio : public INDI::DefaultDevice
 
   protected:
     const char *getDefaultName() override;
-
+    virtual bool saveConfigItems(FILE *fp) override;
     virtual bool Disconnect() override;
   
 
@@ -79,12 +80,20 @@ class Netio : public INDI::DefaultDevice
       OFF,
       ON
     };
+    IText NameS1T[1];
+    ITextVectorProperty NameS1TP;
     ISwitch Socket1S[2];
     ISwitchVectorProperty Socket1SP;
+    IText NameS2T[1];
+    ITextVectorProperty NameS2TP;
     ISwitch Socket2S[2];
     ISwitchVectorProperty Socket2SP;
+    IText NameS3T[1];
+    ITextVectorProperty NameS3TP;
     ISwitch Socket3S[2];
     ISwitchVectorProperty Socket3SP;
+    IText NameS4T[1];
+    ITextVectorProperty NameS4TP;
     ISwitch Socket4S[2];
     ISwitchVectorProperty Socket4SP;
     IText Name1T[1];
