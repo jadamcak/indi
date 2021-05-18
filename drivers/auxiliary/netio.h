@@ -61,9 +61,11 @@ class Netio : public INDI::DefaultDevice
     bool Handshake_tcp();
     bool sendCommand(const char *cmd, char *resp);
     bool sendCommand(const char *cmd);
+    bool GetStatus();
     bool TurnOn(const int i);
     bool TurnOff(const int i);
     void parse(const char *resp); 
+    void parse(const char *resp, const int i); 
 
     int PortFD { -1 };
 
@@ -75,6 +77,8 @@ class Netio : public INDI::DefaultDevice
 
     const uint8_t COM_TIMEOUT = 3;
 
+    ISwitch StatusS[1];
+    ISwitchVectorProperty StatusSP;
     enum SocketE
     {
       OFF,

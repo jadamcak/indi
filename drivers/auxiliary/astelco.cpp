@@ -116,13 +116,20 @@ bool Astelco::initProperties()
     IUFillNumber(&TargetPositionN[0], "GO TO", "Go To", "%3.2f", -50., 70., 0., 0.);
     IUFillNumberVector(&TargetPositionNP, TargetPositionN, 1, getDeviceName(), "GOTO", "GoTo", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE);
     
+    IUFillSwitch(&PositionS[0], "GETP", "Get Position", ISS_OFF);
+    IUFillSwitchVector(&PositionSP, PositionS, 1, getDeviceName(), "Get Positions", "", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillText(&PositionT[REAL], "REAL_POSITION", "Real Position", "NA");
+    IUFillText(&PositionT[MIN], "MIN_POSITION", "Min Position", "NA");
+    IUFillText(&PositionT[MAX], "MAX_POSITION", "Max Position", "NA");
+    IUFillTextVector(&PositionTP, PositionT, POSITION_COUNT, getDeviceName(), "POSITON", "Position", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
+    
     addAuxControls();
-    defineText(&LoginTP);
+    defineProperty(&LoginTP);
 
     tcpConnection = new Connection::TCP(this);
     tcpConnection->registerHandshake([&]() { return Handshake_tcp(); });
-    tcpConnection->setDefaultPort(23);
-    tcpConnection->setConnectionType(Connection::TCP::ConnectionType::TYPE_TCP);
+    //tcpConnection->setDefaultPort(23);
+    //tcpConnection->setConnectionType(Connection::TCP::ConnectionType::TYPE_TCP);
     registerConnection(tcpConnection);
 
     return true;
@@ -131,18 +138,22 @@ bool Astelco::initProperties()
 bool Astelco::updateProperties()
 {
     INDI::DefaultDevice::updateProperties();
-    defineText(&LoginTP);
+    defineProperty(&LoginTP);
     if (isConnected())
     {
-        defineSwitch(&OnOffSP);
-        defineSwitch(&DeviceSP);
-        defineNumber(&TargetPositionNP);
-        defineText(&StatusTP);
+        defineProperty(&OnOffSP);
+        defineProperty(&DeviceSP);
+        defineProperty(&PositionSP);
+        defineProperty(&PositionTP);
+        defineProperty(&TargetPositionNP);
+        defineProperty(&StatusTP);
     }
     else
     {
         deleteProperty(OnOffSP.name);
         deleteProperty(DeviceSP.name);
+        deleteProperty(PositionSP.name);
+        deleteProperty(PositionTP.name);
         deleteProperty(TargetPositionNP.name); 
         deleteProperty(StatusTP.name);
     }
@@ -160,38 +171,60 @@ bool Astelco::Handshake_tcp()
     PortFD = tcpConnection->getPortFD();  
     char resp[256]={0};
     bool succes = sendCommand("\0", resp);
+    if(!succes)
+    {
+        succes = sendCommand("\0", resp);
+        if(!succes)
+            return false;
+    } 
+    if(strlen(resp)<5)
+    {
+        LOGF_INFO("TPL2: %d",strlen(resp));
+        return false;
+    }
     char resp2[256]={0};
+    SetLogin(LoginT[0].text, LoginT[1].text);
     succes = sendCommand(loginString, resp);
     if(succes)
     {
         int i = GetWord(resp, resp2);
-        i = GetWord(&resp[i], resp2);
-        i = GetWord(&resp[i], &resp2[100]);
-        i = GetWord(&resp[i], &resp2[200]);
+        i += GetWord(&resp[++i], &resp2[50]);
+        i += GetWord(&resp[++i], &resp2[100]);
+        i += GetWord(&resp[++i], &resp2[200]);
         readRules = atoi(&resp2[100]);
         writeRules = atoi(&resp2[200]);
+        if((resp2[50]=='O')||(resp2[51]=='K'))
+        {
+            //connected = true;
+            LOGF_INFO("%s",&resp2[50]);
+            TimerHit();
+        }
+        else
+            return false;        
     }    
-    connected = true;
-    TimerHit(); 
+     
     return succes;
 }
 
 bool Astelco::Disconnect()
 {
     sendCommand("DISCONNECT");
-    connected = false;    
+    //connected = false;    
     return INDI::DefaultDevice::Disconnect();
 }
 
 bool Astelco::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
-    if (!strcmp(name, TargetPositionNP.name))
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
-        TargetPositionNP.s = IPS_OK;
-        IDSetNumber(&TargetPositionNP, nullptr);
-        return SetPosition(int(TargetPositionN[0].value));
+        if (!strcmp(name, TargetPositionNP.name))
+        {
+            IUUpdateNumber(&TargetPositionNP, values, names, n);
+            TargetPositionNP.s = IPS_OK;
+            IDSetNumber(&TargetPositionNP, nullptr);
+            return SetPosition(TargetPositionN[0].value);
+        }
     }
-
     return INDI::DefaultDevice::ISNewNumber(dev, name, values, names, n);
 }
 
@@ -320,16 +353,42 @@ bool Astelco::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             return true;
         }
     }
-
+ 
+    if (!strcmp(name, PositionSP.name))
+    {
+        IUResetSwitch(&PositionSP);
+        if (!strcmp(PositionS[0].name, names[0]))
+            {
+                char real[256], min_pos[256], max_pos[256];
+                if (!GetPosition(real, min_pos, max_pos))
+                {
+                    PositionSP.s = IPS_ALERT;
+                    LOGF_ERROR("Failed to switch to %s.",GetDevice(DOME));
+                }
+                else
+                {
+                    sprintf(PositionT[REAL].text, "%s", real);
+                    sprintf(PositionT[REAL].text, "%s", real);
+                    sprintf(PositionT[REAL].text, "%s", real);
+                    PositionS[0].s = ISS_ON;
+                    PositionSP.s = IPS_BUSY;
+                }
+            }
+            
+            IDSetSwitch(&PositionSP, nullptr);
+            return true;
+        
+    }
+ 
     return INDI::DefaultDevice::ISNewSwitch(dev, name, states, names, n);
 }
 
 void Astelco::TimerHit()
 {
-    //if (!isConnected())
-    //    return;
-    if (!connected)
+    if (!isConnected())
         return;
+    //if (!connected)
+    //    return;
 
     GetUptime();
     OnOff(GET);
@@ -343,7 +402,7 @@ void Astelco::TimerHit()
         GetStatus(TARGET_DISTANCE);
     }
     
-    SetTimer(POLLMS);
+    SetTimer(getPollingPeriod());
 }
 
 bool Astelco::GetStatus(StatusE e)
@@ -454,9 +513,9 @@ bool Astelco::OnOff(OnOffE e)
     return succes;
 }
 
-bool Astelco::SetPosition(const int pos)
+bool Astelco::SetPosition(const float pos)
 {
-    if(0<sprintf(cmdString, "%d SET POSITION.INSTRUMENTAL.%s.TARGETPOS=%d\n", cmdDeviceInt, cmdDevice, pos))
+    if(0<sprintf(cmdString, "%d SET POSITION.INSTRUMENTAL.%s.TARGETPOS=%f\n", cmdDeviceInt, cmdDevice, pos))
         return sendCommand(cmdString);
     return false;
 }
@@ -482,6 +541,8 @@ int Astelco::GetWord(const char* cmd, char *word)
     {
         word[i]=cmd[i];
         i++;
+        if(cmd[i]=='\n')
+            break;
     }
     word[i]='\0';
     return i;
@@ -543,6 +604,48 @@ bool Astelco::GetUptime()
     sprintf(cmd, "%d %s", cmdDeviceInt, "GET SERVER.UPTIME");
     bool succes = sendCommand(cmd, resp);
     StatusT[UPTIME].text = resp;
+    return succes;
+}
+
+bool Astelco::GetPosition(char *real, char *min_real, char *max_real)
+{
+    bool succes = false;
+    char resp[256] = {0};
+    char resp2[256] = {0};
+    if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS\n", cmdDeviceInt, cmdDevice))
+    {    
+        succes = sendCommand(cmdString, resp);
+        if(succes)
+        {
+            int i = GetWord(resp, resp2);
+            i += GetWord(&resp[++i], real);
+            LOGF_INFO("Real position: %s", real);
+        }            
+        succes = false;
+    }
+    if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS!MIN\n", cmdDeviceInt, cmdDevice))
+    {    
+        succes = sendCommand(cmdString, resp);
+        if(succes)
+        {
+            int i = GetWord(resp, resp2);
+            i += GetWord(&resp[++i], min_real);
+            LOGF_INFO("Minimal position: %s", min_real);
+        }            
+        succes = false;
+    }
+    if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS!MAX\n", cmdDeviceInt, cmdDevice))
+    {    
+        succes = sendCommand(cmdString, resp);
+        if(succes)
+        {
+            int i = GetWord(resp, resp2);
+            i += GetWord(&resp[++i], max_real);
+            LOGF_INFO("Maximal position: %s", max_real);
+        }            
+        //succes = false;
+    }
+
     return succes;
 }
 

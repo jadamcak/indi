@@ -53,10 +53,11 @@ class Astelco : public INDI::DefaultDevice//, public INDI::Focuser
     virtual void TimerHit() override;
     virtual bool Disconnect() override;
 
-    bool SetPosition(const int pos);
+    bool SetPosition(const float pos);
     bool SetLogin(const char* usr, const char* pas);
     bool SetDevice(const char* device);
     int GetWord(const char* cmd, char *word);
+    bool GetPosition(char *real, char *min_real, char *max_real);
 
   private: 
     bool Handshake_tcp();
@@ -119,6 +120,19 @@ class Astelco : public INDI::DefaultDevice//, public INDI::Focuser
     const char* GetDevice(DeviceE e); 
     INumber TargetPositionN[1];
     INumberVectorProperty TargetPositionNP;
+
+    ISwitch PositionS[1];
+    ISwitchVectorProperty PositionSP;
+
+    enum PositionE
+    {
+      REAL,
+      MIN,
+      MAX,
+      POSITION_COUNT
+    };
+    IText PositionT[POSITION_COUNT];
+    ITextVectorProperty PositionTP;
     
     bool GetUptime();
     bool OnOff(OnOffE e);

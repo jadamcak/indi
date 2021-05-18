@@ -221,13 +221,13 @@ bool Watec::updateProperties()
     if (isConnected())
     {
         // create properties if we are connected
-        defineSwitch(&ExposureSP);
-        defineSwitch(&GainSP);
-        defineNumber(&GainNP);
-        defineSwitch(&Gain1SP);
-        defineSwitch(&Gain2SP);
-        defineSwitch(&Gain3SP);
-        defineSwitch(&MirrorSP);
+        defineProperty(&ExposureSP);
+        defineProperty(&GainSP);
+        defineProperty(&GainNP);
+        defineProperty(&Gain1SP);
+        defineProperty(&Gain2SP);
+        defineProperty(&Gain3SP);
+        defineProperty(&MirrorSP);
     }
     else
     {

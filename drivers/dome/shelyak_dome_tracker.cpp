@@ -222,24 +222,24 @@ const char *ShelyakDT::getDefaultName()
 bool ShelyakDT::updateProperties()
 {
     INDI::Dome::updateProperties();
-    defineSwitch(&RegimeSP);
+    defineProperty(&RegimeSP);
 
     if (isConnected())
     {
         setupInitialParameters();
         deleteProperty(DomeShutterSP.name);
         deleteProperty(DomeMotionSP.name);
-        defineNumber(&DomeShutterNP);
-        defineSwitch(&DomeShutterSP3);
+        defineProperty(&DomeShutterNP);
+        defineProperty(&DomeShutterSP3);
         if(roofType==0xAA)
         {
-            defineSwitch(&DomeMotionSP3);
-            defineSwitch(&DomeResetSP);
+            defineProperty(&DomeMotionSP3);
+            defineProperty(&DomeResetSP);
         }
-        defineText(&VersionTP);
-        defineText(&StatusTP);
+        defineProperty(&VersionTP);
+        defineProperty(&StatusTP);
         if(roofType==0xAA)
-            defineSwitch(&CalibrateSP);
+            defineProperty(&CalibrateSP);
         else
         {
             deleteProperty(DomeMotionSP3.name);
@@ -556,7 +556,7 @@ bool ShelyakDT::ISNewNumber(const char *dev, const char *name, double values[], 
             {
                 if (!strcmp(DomeShutterN[DOME_SHUTTER_MOVE_TIME].name, names[i]))
                 {
-                    if (shutterTime=(static_cast<uint32_t>(values[i])))//set shutter time
+                    if ((shutterTime = static_cast<uint32_t>(values[i])))//set shutter time
                         DomeShutterN[DOME_SHUTTER_MOVE_TIME].value = values[i];
                     else
                     {
@@ -647,7 +647,7 @@ void ShelyakDT::TimerHit()
     if (!isConnected())
         return;
 
-    double currentAz = DomeAbsPosN[0].value;
+    [[_IsUnused]]double currentAz = DomeAbsPosN[0].value;
     std::string domeStatus = StatusT[STATUS_DOME].text;
     std::string shutterStatus = StatusT[STATUS_SHUTTER].text;
     if(getStatus() && (strcmp(domeStatus.c_str(), StatusT[STATUS_DOME].text) != 0 ||
@@ -692,7 +692,7 @@ void ShelyakDT::TimerHit()
     //if(getDomeAzPos() && std::abs(currentAz - DomeAbsPosN[0].value) > DOME_AZ_THRESHOLD)
     //    IDSetNumber(&DomeAbsPosNP, nullptr);
 
-    SetTimer(POLLMS);
+    SetTimer(getPollingPeriod());
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1056,8 +1056,8 @@ bool ShelyakDT::getStatus()
             IUSaveText(&StatusT[RESET_SWITCH], "Closed");
         else
             IUSaveText(&StatusT[RESET_SWITCH], "Opened");
-        uint8_t value0 = res[13];
-        uint8_t value1 = res[14];
+        [[_IsUnused]]uint8_t value0 = res[13];
+        [[_IsUnused]]uint8_t value1 = res[14];
         return true;
     }
     LOGF_WARN("Bad answer, CRC failed %X", res[15]);
