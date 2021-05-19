@@ -125,7 +125,7 @@ bool Astelco::initProperties()
     
     addAuxControls();
     defineProperty(&LoginTP);
-
+    deviceSet = false;
     tcpConnection = new Connection::TCP(this);
     tcpConnection->registerHandshake([&]() { return Handshake_tcp(); });
     //tcpConnection->setDefaultPort(23);
@@ -220,9 +220,18 @@ bool Astelco::ISNewNumber(const char *dev, const char *name, double values[], ch
         if (!strcmp(name, TargetPositionNP.name))
         {
             IUUpdateNumber(&TargetPositionNP, values, names, n);
-            TargetPositionNP.s = IPS_OK;
-            IDSetNumber(&TargetPositionNP, nullptr);
-            return SetPosition(TargetPositionN[0].value);
+            if(deviceSet)
+            {
+                TargetPositionNP.s = IPS_OK;
+                IDSetNumber(&TargetPositionNP, nullptr);
+                return SetPosition(TargetPositionN[0].value);
+            }
+            else
+            {
+                LOG_WARN("NEED to choose DEVICE");
+                TargetPositionNP.s = IPS_ALERT;
+                return false;
+            }
         }
     }
     return INDI::DefaultDevice::ISNewNumber(dev, name, values, names, n);
@@ -309,18 +318,22 @@ bool Astelco::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
         for (int i = 0; i < DeviceSP.nsp; i++)
         {
             if (states[i] != ISS_ON)
-                continue;
+                continue;                
             if (!strcmp(DeviceS[DOME].name, names[i]))
             {
                 if (!SetDevice(GetDevice(DOME)))
                 {
                     DeviceSP.s = IPS_ALERT;
                     LOGF_ERROR("Failed to switch to %s.",GetDevice(DOME));
+                    deviceSet = false;
                 }
                 else
                 {
                     DeviceS[DOME].s = ISS_ON;
+                    DeviceS[FOCUS].s = ISS_OFF;
+                    DeviceS[COVER].s = ISS_OFF;
                     DeviceSP.s = IPS_BUSY;
+                    deviceSet = true;
                 }
             }
             else if (!strcmp(DeviceS[FOCUS].name, names[i]))
@@ -329,11 +342,15 @@ bool Astelco::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 {
                     DeviceSP.s = IPS_ALERT;
                     LOGF_ERROR("Failed to switch to %s.", GetDevice(FOCUS));
+                    deviceSet = false;
                 }
                 else
                 {
                     DeviceS[FOCUS].s = ISS_ON;
+                    DeviceS[DOME].s = ISS_OFF;                    
+                    DeviceS[COVER].s = ISS_OFF;
                     DeviceSP.s = IPS_BUSY;
+                    deviceSet = true;
                 }
             }
             else if (!strcmp(DeviceS[COVER].name, names[i]))
@@ -342,11 +359,15 @@ bool Astelco::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 {
                     DeviceSP.s = IPS_ALERT;
                     LOGF_ERROR("Failed to switch to %s.", GetDevice(COVER));
+                    deviceSet = false;
                 }
                 else
                 {
                     DeviceS[COVER].s = ISS_ON;
+                    DeviceS[DOME].s = ISS_OFF;  
+                    DeviceS[FOCUS].s = ISS_OFF;
                     DeviceSP.s = IPS_BUSY;
+                    deviceSet = true;
                 }
             }
             IDSetSwitch(&DeviceSP, nullptr);
@@ -358,6 +379,7 @@ bool Astelco::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
     {
         IUResetSwitch(&PositionSP);
         if (!strcmp(PositionS[0].name, names[0]))
+        {   if(deviceSet)
             {
                 char real[256], min_pos[256], max_pos[256];
                 if (!GetPosition(real, min_pos, max_pos))
@@ -368,16 +390,23 @@ bool Astelco::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 else
                 {
                     sprintf(PositionT[REAL].text, "%s", real);
-                    sprintf(PositionT[REAL].text, "%s", real);
-                    sprintf(PositionT[REAL].text, "%s", real);
-                    PositionS[0].s = ISS_ON;
-                    PositionSP.s = IPS_BUSY;
+                    sprintf(PositionT[MIN].text, "%s", min_pos);
+                    sprintf(PositionT[MAX].text, "%s", max_pos);
+                    //PositionS[0].s = ISS_ON;
+                    PositionSP.s = IPS_OK;
                 }
             }
+            else
+            {
+                LOG_WARN("NEED to choose DEVICE");
+                PositionSP.s = IPS_ALERT;
+                IDSetSwitch(&PositionSP, nullptr);
+                return false;
+            }
+        }
             
-            IDSetSwitch(&PositionSP, nullptr);
-            return true;
-        
+        IDSetSwitch(&PositionSP, nullptr);
+        return true;
     }
  
     return INDI::DefaultDevice::ISNewSwitch(dev, name, states, names, n);
@@ -389,10 +418,9 @@ void Astelco::TimerHit()
         return;
     //if (!connected)
     //    return;
-
     GetUptime();
     OnOff(GET);
-    if(turnedOn>=1)
+    if((turnedOn>=1)&&(deviceSet))
     {
         GetStatus(POWER_STATE);
         GetStatus(REAL_POSITION);
@@ -401,7 +429,6 @@ void Astelco::TimerHit()
         GetStatus(TARGET_POSITION);
         GetStatus(TARGET_DISTANCE);
     }
-    
     SetTimer(getPollingPeriod());
 }
 

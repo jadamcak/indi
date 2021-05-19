@@ -78,6 +78,7 @@ class Astelco : public INDI::DefaultDevice//, public INDI::Focuser
     int readRules = {0};
     float turnedOn = {0};
     bool connected = false;
+    bool deviceSet = false;
 
     IText LoginT[2];
     ITextVectorProperty LoginTP;
