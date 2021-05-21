@@ -63,6 +63,13 @@ class Astelco : public INDI::DefaultDevice//, public INDI::Focuser
     bool Handshake_tcp();
     bool sendCommand(const char *cmd, char *resp);
     bool sendCommand(const char *cmd);
+    bool readResponse(char *resp);
+    int parseAnswer(const char *resp, char *value);
+    void setAnswer(const int i, const char *value);
+    void* func(void *);
+    bool createThread();
+    bool killThread();
+
     
 
     int PortFD { -1 };
@@ -77,8 +84,10 @@ class Astelco : public INDI::DefaultDevice//, public INDI::Focuser
     int writeRules = {0};
     int readRules = {0};
     float turnedOn = {0};
+    bool threadOn = false;
     bool connected = false;
     bool deviceSet = false;
+    pthread_t Astelco_t1;
 
     IText LoginT[2];
     ITextVectorProperty LoginTP;
