@@ -88,6 +88,7 @@ class Astelco : public INDI::DefaultDevice//, public INDI::Focuser
     bool connected = false;
     bool deviceSet = false;
     pthread_t Astelco_t1;
+    char *history[1000];
 
     IText LoginT[2];
     ITextVectorProperty LoginTP;

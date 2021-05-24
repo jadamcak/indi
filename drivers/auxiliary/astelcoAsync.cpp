@@ -480,7 +480,9 @@ bool Astelco::GetStatus(StatusE e)
     char cmd[255] = {0};
     char resp[255] = {0};
     sprintf(cmd, "%d GET POSITION.INSTRUMENTAL.%s.%s", cmdDeviceInt, cmdDevice, GetStatusE(e));
-    bool succes = sendCommand(cmd, resp);
+    bool succes = sendCommand(cmd);
+    history[(cmdDeviceInt%1000)] = StatusT[e].text;
+    /*
     if(e==POWER_STATE)
     {
         if(strcmp(resp,"-1.0")==0)
@@ -542,6 +544,7 @@ bool Astelco::GetStatus(StatusE e)
     }
     else
         StatusT[e].text = resp;
+    /**/
     return succes;
 }
 
@@ -553,17 +556,21 @@ bool Astelco::OnOff(OnOffE e)
     {
         case ON:
             sprintf(cmd, "%d SET TELESCOPE.READY=%d", cmdDeviceInt, 1);
+            history[(cmdDeviceInt%1000)] = StatusT[TELESCOPE_READY].text;
             break;
         case OFF:
             sprintf(cmd, "%d SET TELESCOPE.READY=%d", cmdDeviceInt, 0);
+            history[(cmdDeviceInt%1000)] = StatusT[TELESCOPE_READY].text;
             break;
         case GET:
             sprintf(cmd, "%d GET TELESCOPE.READY_STATE", cmdDeviceInt);
+            history[(cmdDeviceInt%1000)] = StatusT[TELESCOPE_READY].text;
             break;
         default:
         break;
     }
-    bool succes = sendCommand(cmd, resp);
+    bool succes = sendCommand(cmd);
+    /*
     if(e==GET)
     {
         if(strcmp(resp,"-3.0")==0)
@@ -580,13 +587,19 @@ bool Astelco::OnOff(OnOffE e)
             sprintf(StatusT[TELESCOPE_READY].text, "%s", resp);
         //parse somhow 0.0 to 1.0
     }
+    /**/
     return succes;
 }
 
 bool Astelco::SetPosition(const float pos)
 {
+    bool success = false;
     if(0<sprintf(cmdString, "%d SET POSITION.INSTRUMENTAL.%s.TARGETPOS=%f\n", cmdDeviceInt, cmdDevice, pos))
-        return sendCommand(cmdString);
+    {
+        success = sendCommand(cmdString);
+        history[(cmdDeviceInt%1000)] = StatusT[TARGET_POSITION].text;
+        return success;
+    }
     return false;
 }
 
@@ -672,47 +685,31 @@ bool Astelco::GetUptime()
     char cmd[254] = {0};
     char resp[255] = {0};
     sprintf(cmd, "%d %s", cmdDeviceInt, "GET SERVER.UPTIME");
-    bool succes = sendCommand(cmd, resp);
-    StatusT[UPTIME].text = resp;
+    bool succes = sendCommand(cmd);//increments cmdDeviceInt internally
+    history[(cmdDeviceInt%1000)] = StatusT[UPTIME].text;
+    //StatusT[UPTIME].text = resp;
     return succes;
 }
 
 bool Astelco::GetPosition(char *real, char *min_real, char *max_real)
 {
     bool succes = false;
-    char resp[256] = {0};
-    char resp2[256] = {0};
     if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS\n", cmdDeviceInt, cmdDevice))
     {    
-        succes = sendCommand(cmdString, resp);
-        if(succes)
-        {
-            int i = GetWord(resp, resp2);
-            i += GetWord(&resp[++i], real);
-            LOGF_INFO("Real position: %s", real);
-        }            
+        succes = sendCommand(cmdString);
+        history[(cmdDeviceInt%1000)] = PositionT[REAL].text;            
         succes = false;
     }
     if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS!MIN\n", cmdDeviceInt, cmdDevice))
     {    
-        succes = sendCommand(cmdString, resp);
-        if(succes)
-        {
-            int i = GetWord(resp, resp2);
-            i += GetWord(&resp[++i], min_real);
-            LOGF_INFO("Minimal position: %s", min_real);
-        }            
+        succes = sendCommand(cmdString);
+        history[(cmdDeviceInt%1000)] = PositionT[MIN].text;            
         succes = false;
     }
     if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS!MAX\n", cmdDeviceInt, cmdDevice))
     {    
-        succes = sendCommand(cmdString, resp);
-        if(succes)
-        {
-            int i = GetWord(resp, resp2);
-            i += GetWord(&resp[++i], max_real);
-            LOGF_INFO("Maximal position: %s", max_real);
-        }            
+        succes = sendCommand(cmdString);
+        history[(cmdDeviceInt%1000)] = PositionT[MAX].text;            
         //succes = false;
     }
 
@@ -819,4 +816,18 @@ bool Astelco::readResponse(char *resp)
     LOGF_INFO("RESPONSE: <%s>", resp);
 
     return true;
+}
+
+void Astelco::setAnswer(const int i, const char *value)
+{
+    sprintf(history[i], "%s", value);
+}
+
+int Astelco::parseAnswer(const char *resp, char *value)
+{
+    char word[256] = {0};
+    int i = GetWord(resp, word);
+    int idx = atoi(word);
+    sprintf(value, "%s", resp[++i]);
+    return idx;
 }
