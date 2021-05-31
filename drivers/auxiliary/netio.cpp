@@ -132,6 +132,15 @@ bool Netio::initProperties()
 
     defineProperty(&Name1TP);
     defineProperty(&Pass1TP);
+    defineProperty(&StatusSP);
+    defineProperty(&NameS1TP);
+    defineProperty(&Socket1SP);
+    defineProperty(&NameS2TP);
+    defineProperty(&Socket2SP);
+    defineProperty(&NameS3TP);
+    defineProperty(&Socket3SP);
+    defineProperty(&NameS4TP);
+    defineProperty(&Socket4SP);
     
     //serialConnection = new Connection::Serial(this);
     //serialConnection->registerHandshake([&]() { return Handshake_serial(); });
@@ -203,15 +212,15 @@ bool Netio::updateProperties()
     }
     else
     {
-        deleteProperty(StatusSP.name);
-        deleteProperty(Socket1SP.name);      
-        deleteProperty(Socket2SP.name);      
-        deleteProperty(Socket3SP.name);      
-        deleteProperty(Socket4SP.name); 
-        deleteProperty(NameS1TP.name);        
-        deleteProperty(NameS2TP.name);        
-        deleteProperty(NameS3TP.name);        
-        deleteProperty(NameS4TP.name);        
+        //deleteProperty(StatusSP.name);
+        //deleteProperty(Socket1SP.name);      
+        //deleteProperty(Socket2SP.name);      
+        //deleteProperty(Socket3SP.name);      
+        //deleteProperty(Socket4SP.name); 
+        //deleteProperty(NameS1TP.name);        
+        //deleteProperty(NameS2TP.name);        
+        //deleteProperty(NameS3TP.name);        
+        //deleteProperty(NameS4TP.name);        
         //deleteProperty(Name1TP.name);
         //deleteProperty(Pass1TP.name);
     }
@@ -221,7 +230,7 @@ bool Netio::updateProperties()
 
 const char *Netio::getDefaultName()
 {
-    return static_cast<const char *>("NETIO");
+    return static_cast<const char *>("NETIO 4");
 }
 
 /*
@@ -250,21 +259,39 @@ bool Netio::Handshake_tcp()
 
     PortFD = tcpConnection->getPortFD();  
         
-    return GetStatus();
+    char buff[255];
+    sprintf(buff, "login %s %s\r\n", netioName, netioPass);
+    bool succes = sendCommand(buff);
+    sendCommand("\0");
+
+    TimerHit();
+
+    return succes;
 }
 
 bool Netio::Disconnect()
 {
-    //char buff[255];
-    //sprintf(buff, "quit\r\n");
-    //sendCommand(buff);
+    char buff[255];
+    sprintf(buff, "quit\r\n");
+    sendCommand(buff);
 
     return INDI::DefaultDevice::Disconnect();
 }
 
+void Netio::TimerHit()
+{
+    if (!isConnected())
+        return;
+
+    GetStatus();
+    SetTimer(getPollingPeriod());
+}
+
 bool Netio::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
-    if (!strcmp(name, StatusSP.name))
+    if(isConnected())
+    {
+        if (!strcmp(name, StatusSP.name))
         {
             if (IUUpdateSwitch(&StatusSP, states, names, n) < 0)
                 return false;
@@ -286,7 +313,7 @@ bool Netio::ISNewSwitch(const char *dev, const char *name, ISState *states, char
             return true;
         }
 
-    if (!strcmp(name, Socket1SP.name))
+        if (!strcmp(name, Socket1SP.name))
         {
             if (IUUpdateSwitch(&Socket1SP, states, names, n) < 0)
                 return false;
@@ -315,12 +342,12 @@ bool Netio::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                 }
                 //else Socket1SP.s = IPS_OK;
             }
-            IUResetSwitch(&Socket1SP);         
+            //IUResetSwitch(&Socket1SP);         
             IDSetSwitch(&Socket1SP, nullptr);
             return true;
         }
 
-    if (!strcmp(name, Socket2SP.name))
+        if (!strcmp(name, Socket2SP.name))
         {
             if (IUUpdateSwitch(&Socket2SP, states, names, n) < 0)
                 return false;
@@ -349,12 +376,12 @@ bool Netio::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                 }
                 //else Socket2SP.s = IPS_OK;
             }
-            IUResetSwitch(&Socket2SP);         
+            //IUResetSwitch(&Socket2SP);         
             IDSetSwitch(&Socket2SP, nullptr);
             return true;
         }
 
-    if (!strcmp(name, Socket3SP.name))
+        if (!strcmp(name, Socket3SP.name))
         {
             if (IUUpdateSwitch(&Socket3SP, states, names, n) < 0)
                 return false;
@@ -383,12 +410,12 @@ bool Netio::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                 }
                 //else Socket3SP.s = IPS_OK;
             }
-            IUResetSwitch(&Socket3SP);    
+            //IUResetSwitch(&Socket3SP);    
             IDSetSwitch(&Socket3SP, nullptr);
             return true;
         }
 
-    if (!strcmp(name, Socket4SP.name))
+        if (!strcmp(name, Socket4SP.name))
         {
             if (IUUpdateSwitch(&Socket4SP, states, names, n) < 0)
                 return false;
@@ -417,11 +444,12 @@ bool Netio::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                 }
                 //else Socket4SP.s = IPS_OK;
             }
-            IUResetSwitch(&Socket4SP);
+            //IUResetSwitch(&Socket4SP);
             IDSetSwitch(&Socket4SP, nullptr);
             return true;
         }
-
+    }
+    
     return INDI::DefaultDevice::ISNewSwitch(dev, name, states, names, n);
 }
 
@@ -517,7 +545,7 @@ bool Netio::sendCommand(const char *cmd, char *resp)
         }
     }
 
-    resp[nbytes_read - 1] = '\0';
+    resp[nbytes_read - 2] = '\0';
     LOGF_DEBUG("RESPONSE: <%s>", resp);
 
     return true;
@@ -533,106 +561,84 @@ bool Netio::sendCommand(const char *cmd){
 bool Netio::GetStatus()
 {
     char buff[255];
-    sprintf(buff, "login %s %s\r\n", netioName, netioPass);
-    sendCommand(buff);  
     sprintf(buff, "port list\r\n");
     char resp[255] = "\0";
     sendCommand(buff, resp); 
-    sprintf(buff, "quit\r\n");
-    sendCommand(buff); 
     if (isSimulation())
         parse("0110");
     else
-        parse(resp);
+        parse(&resp[4]);
     return true;
 }
 
 // Method for turning on of socket number i
 bool Netio::TurnOn(const int i)
 {
-    PortFD = tcpConnection->getPortFD(); 
     char buff[255];
     char resp[255];
-    sprintf(buff, "login %s %s\r\n", netioName, netioPass);
-    sendCommand(buff); 
     sprintf(buff, "port %d %d\r\n", i, 1);
-    sendCommand(buff, resp); 
+    bool ret = sendCommand(buff, resp); 
     if (isSimulation())
-        parse("1", i);
+        parse("1", i, true);
     else
-        parse(resp, i);
-    sprintf(buff, "quit\r\n");
-    return sendCommand(buff); 
+        parse(&resp[4], i, true);
+    return ret; 
  }
 
 // Method for turning off of socket number i
  bool Netio::TurnOff(const int i)
 {
-    PortFD = tcpConnection->getPortFD(); 
     char buff[255];
     char resp[255];
-    sprintf(buff, "login %s %s\r\n", netioName, netioPass);
-    sendCommand(buff); 
     sprintf(buff, "port %d %d\r\n", i, 0);
-    sendCommand(buff, resp); 
+    bool ret = sendCommand(buff, resp); 
     if (isSimulation())
-        parse("0", i);
+        parse("0", i, false);
     else
-        parse(resp, i);
-    sprintf(buff, "quit\r\n");
-    return sendCommand(buff); 
+        parse(&resp[4], i, false);
+    return ret;  
  }
 
 // Method for parsing response with actual states of sockets
  void Netio::parse(const char* resp)
  {
-    LOGF_DEBUG("RESP: <%s>", resp);
+    //LOGF_DEBUG("RESP: <%s>", resp);
+    LOGF_INFO("STATUS: <%s>", resp);
+    LOG_INFO(resp);
     //parse response to LIST command
-    int inc = 0;
-    int idx = 0;
-    switch (sizeof(resp))
-    {
-        case 4:
-        case 10:
-            inc = 1;
-            break;
-        case 7:
-        case 13:
-            inc = 2;
-            break;
-        case 6:
-        default:
-            break;
-    }
-    if(resp[idx] == '0')
+    if(resp[0] == '0')
         Socket1SP.s = IPS_IDLE;
-    else if(resp[idx] == '1')
+    else if(resp[0] == '1')
         Socket1SP.s = IPS_OK;
-    idx += inc;
-    if(resp[idx] == '0')
+    if(resp[1] == '0')
         Socket2SP.s = IPS_IDLE;
-    else if(resp[idx] == '1')
+    else if(resp[1] == '1')
         Socket2SP.s = IPS_OK;
-    idx += inc;
-    if(resp[idx] == '0')
+    if(resp[2] == '0')
         Socket3SP.s = IPS_IDLE;
-    else if(resp[idx] == '1')
+    else if(resp[2] == '1')
         Socket3SP.s = IPS_OK;
-    idx += inc;
-    if(resp[idx] == '0')
+    if(resp[3] == '0')
         Socket4SP.s = IPS_IDLE;
-    else if(resp[idx] == '1')
+    else if(resp[3] == '1')
         Socket4SP.s = IPS_OK;
+    IDSetSwitch(&Socket1SP, nullptr);
+    IDSetSwitch(&Socket2SP, nullptr);
+    IDSetSwitch(&Socket3SP, nullptr);
+    IDSetSwitch(&Socket4SP, nullptr);
  }
 
- void Netio::parse(const char *resp, const int i)
+ void Netio::parse(const char *resp, const int i, const bool b)
  {
-    LOGF_DEBUG("RESP: <%s> Socket %d", resp, i);
+    LOGF_DEBUG("RESP: <%s> Socket %d %d", resp, i, b);
     IPState tmp = IPS_ALERT;
-    if(resp[0] == '0')
-        tmp = IPS_IDLE;
-    else if(resp[0] == '1')
-        tmp = IPS_OK;
+    if((resp[0] == 'O')&&(resp[1]=='K'))
+    {    
+        if(b)
+            tmp = IPS_OK;
+        else 
+            tmp = IPS_IDLE;
+    }
     switch(i){
         case 1:
             Socket1SP.s = tmp;

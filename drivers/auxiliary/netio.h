@@ -54,7 +54,8 @@ class Netio : public INDI::DefaultDevice
     const char *getDefaultName() override;
     virtual bool saveConfigItems(FILE *fp) override;
     virtual bool Disconnect() override;
-  
+    virtual void TimerHit() override;
+     
 
   private:    
     //bool Handshake_serial();
@@ -65,7 +66,7 @@ class Netio : public INDI::DefaultDevice
     bool TurnOn(const int i);
     bool TurnOff(const int i);
     void parse(const char *resp); 
-    void parse(const char *resp, const int i); 
+    void parse(const char *resp, const int i, const bool b); 
 
     int PortFD { -1 };
 
