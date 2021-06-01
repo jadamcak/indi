@@ -30,6 +30,10 @@
 //#include "indiguiderinterface.h"
 #include "indifocuser.h"
 #include <stdint.h>
+#include <atomic>
+#include <iostream>
+#include <chrono>
+#include <thread>
 
 namespace Connection
 {
@@ -57,7 +61,7 @@ class Astelco : public INDI::DefaultDevice//, public INDI::Focuser
     bool SetLogin(const char* usr, const char* pas);
     bool SetDevice(const char* device);
     int GetWord(const char* cmd, char *word);
-    bool GetPosition(char *real, char *min_real, char *max_real);
+    bool GetPosition();
 
   private: 
     bool Handshake_tcp();
@@ -66,9 +70,11 @@ class Astelco : public INDI::DefaultDevice//, public INDI::Focuser
     bool readResponse(char *resp);
     int parseAnswer(const char *resp, char *value);
     void setAnswer(const int i, const char *value);
-    void* func(void *);
+    void thread2();
     bool createThread();
     bool killThread();
+    void initHistory(uint8_t val);
+    void setHistories(char *txt, uint8_t val = 255);
 
     
 
@@ -84,11 +90,11 @@ class Astelco : public INDI::DefaultDevice//, public INDI::Focuser
     int writeRules = {0};
     int readRules = {0};
     float turnedOn = {0};
-    bool threadOn = false;
+    std::atomic<bool> threadOn = {false};
     bool connected = false;
     bool deviceSet = false;
-    pthread_t Astelco_t1;
     char *history[1000];
+    uint8_t history2[1000];
 
     IText LoginT[2];
     ITextVectorProperty LoginTP;

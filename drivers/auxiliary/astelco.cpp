@@ -126,10 +126,9 @@ bool Astelco::initProperties()
     addAuxControls();
     defineProperty(&LoginTP);
     deviceSet = false;
+    initHistory(255);
     tcpConnection = new Connection::TCP(this);
     tcpConnection->registerHandshake([&]() { return Handshake_tcp(); });
-    //tcpConnection->setDefaultPort(23);
-    //tcpConnection->setConnectionType(Connection::TCP::ConnectionType::TYPE_TCP);
     registerConnection(tcpConnection);
 
     return true;
@@ -166,6 +165,59 @@ const char *Astelco::getDefaultName()
     return static_cast<const char *>("Astelco");
 }
 
+void Astelco::initHistory(uint8_t val)
+{
+    int i = 0;
+    while(i<1000)
+    {
+        history2[i] = val;
+        ++i;
+    }
+}
+
+void Astelco::setHistories(char *txt, uint8_t val)
+{
+    int idx = cmdDeviceInt%1000;
+    history[idx] = txt;
+    history2[idx] = val;
+}
+
+void Astelco::thread2()
+{
+    char resp[256] = {0};
+    char value[256] = {0};
+    int cmd = 0;
+    bool thOn = false;
+    thOn = (threadOn.load(std::memory_order_acquire) == true);
+    while(thOn)
+    {
+        //read
+        if(readResponse(resp))
+        {
+            //parse
+            cmd =  parseAnswer(resp, value);
+            //set
+            setAnswer(cmd, value);
+        }
+        thOn = (threadOn.load(std::memory_order_acquire) == true);
+    }
+}
+
+bool Astelco::createThread()
+{
+    std::thread t2(&Astelco::thread2, this);
+    t2.detach();
+    threadOn.store(true, std::memory_order_release);
+    return true;
+}
+
+bool Astelco::killThread()
+{
+    threadOn.store(false, std::memory_order_release);
+    std::this_thread::sleep_for(std::chrono::seconds(2*ASTELCO_TIMEOUT));
+    return false;
+}
+
 bool Astelco::Handshake_tcp()
 {
     PortFD = tcpConnection->getPortFD();  
@@ -196,20 +248,22 @@ bool Astelco::Handshake_tcp()
         if((resp2[50]=='O')||(resp2[51]=='K'))
         {
             //connected = true;
-            LOGF_INFO("%s",&resp2[50]);
+            if(!createThread())
+                return killThread();
             TimerHit();
         }
         else
-            return false;        
+            return false;  
+        return succes;    
     }    
-     
-    return succes;
+    return false;
 }
 
 bool Astelco::Disconnect()
 {
-    sendCommand("DISCONNECT");
-    //connected = false;    
+    killThread(); 
+    char resp[256] = {0};
+    sendCommand("DISCONNECT", resp);
     return INDI::DefaultDevice::Disconnect();
 }
 
@@ -381,17 +435,13 @@ bool Astelco::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
         if (!strcmp(PositionS[0].name, names[0]))
         {   if(deviceSet)
             {
-                char real[256], min_pos[256], max_pos[256];
-                if (!GetPosition(real, min_pos, max_pos))
+                if (!GetPosition())
                 {
                     PositionSP.s = IPS_ALERT;
                     LOGF_ERROR("Failed to switch to %s.",GetDevice(DOME));
                 }
                 else
                 {
-                    sprintf(PositionT[REAL].text, "%s", real);
-                    sprintf(PositionT[MIN].text, "%s", min_pos);
-                    sprintf(PositionT[MAX].text, "%s", max_pos);
                     //PositionS[0].s = ISS_ON;
                     PositionSP.s = IPS_OK;
                 }
@@ -416,8 +466,6 @@ void Astelco::TimerHit()
 {
     if (!isConnected())
         return;
-    //if (!connected)
-    //    return;
     GetUptime();
     OnOff(GET);
     if((turnedOn>=1)&&(deviceSet))
@@ -435,77 +483,15 @@ void Astelco::TimerHit()
 bool Astelco::GetStatus(StatusE e)
 {
     char cmd[255] = {0};
-    char resp[255] = {0};
     sprintf(cmd, "%d GET POSITION.INSTRUMENTAL.%s.%s", cmdDeviceInt, cmdDevice, GetStatusE(e));
-    bool succes = sendCommand(cmd, resp);
-    if(e==POWER_STATE)
-    {
-        if(strcmp(resp,"-1.0")==0)
-            sprintf(StatusT[e].text, "EMERGENCY STOP");
-        else if(strcmp(resp,"0.0")==0)
-            sprintf(StatusT[e].text, "OFF");
-        else if(strcmp(resp,"1.0")==0)
-            sprintf(StatusT[e].text, "ON");
-        else
-            sprintf(StatusT[e].text, "%s", resp);
-    }
-    else if(e==LIMIT_STATE)
-    {   
-        char msg1[25] = {0};
-        char msg2a[25] = {0};
-        char msg2b[25] = {0};
-        char msg3[25] = {0};
-        char msg4a[25] = {0};
-        char msg4b[25] = {0};
-        int ans = atoi(resp);
-        if(ans&0x0080)
-            sprintf(msg1, "HW LIMIT BLOCKING");
-        if(ans&0x0001)
-            sprintf(msg2a, "MIN-HW");
-        if(ans&0x0002)
-            sprintf(msg2b, "MAX-HW");
-        if(ans&0x8000)
-            sprintf(msg3, "SW LIMIT BLOCKING");
-        if(ans&0x0100)
-            sprintf(msg4a, "MIN-SW");
-        if(ans&0x0200)
-            sprintf(msg4b, "MAX-SW");
-        sprintf(StatusT[e].text, "%s (%s %s) %s (%s %s)", msg1, msg2a, msg2b, msg3, msg4a, msg4b);
-    }
-    else if(e==MOTION_STATE)
-    {
-        char msg1[25] = {0};
-        char msg2[25] = {0};
-        char msg3[25] = {0};
-        char msg4[25] = {0};
-        char msg5[25] = {0};
-        char msg6[25] = {0};
-        int ans = atoi(resp);
-        if(ans&0x01)
-            sprintf(msg1, "Axis_Moving");
-        if(ans&0x02)
-            sprintf(msg2, "Trajectory");
-        if(ans&0x04)
-            sprintf(msg3, "LIMIT_STATE");
-        if(ans&0x08)
-            sprintf(msg4, "Target");
-        if(ans&0x10)
-            sprintf(msg5, "Too_Fast_Move");
-        if(ans&0x20)
-            sprintf(msg6, "Unparking/ed");
-        if(ans&0x40)
-            sprintf(msg6, "Parking/ed");
-        sprintf(StatusT[e].text, "%s %s %s %s %s %s", msg1, msg2, msg3, msg4, msg5, msg6);
-    }
-    else
-        StatusT[e].text = resp;
+    setHistories(StatusT[e].text, e+10);
+    bool succes = sendCommand(cmd);
     return succes;
 }
 
 bool Astelco::OnOff(OnOffE e)
 {
     char cmd[255] = {0};
-    char resp[255] = {0};
     switch (e)
     {
         case ON:
@@ -520,30 +506,20 @@ bool Astelco::OnOff(OnOffE e)
         default:
         break;
     }
-    bool succes = sendCommand(cmd, resp);
-    if(e==GET)
-    {
-        if(strcmp(resp,"-3.0")==0)
-            sprintf(StatusT[TELESCOPE_READY].text, "LOCAL MODE");
-        else if(strcmp(resp,"-2.0")==0)
-            sprintf(StatusT[TELESCOPE_READY].text, "EMERGENCY STOP");
-        else if(strcmp(resp,"-1.0")==0)
-            sprintf(StatusT[TELESCOPE_READY].text, "ERRORS block operation");
-        else if(strcmp(resp,"0.0")==0)
-            sprintf(StatusT[TELESCOPE_READY].text, "SHUT DOWN");
-        else if(strcmp(resp,"1.0")==0)
-            sprintf(StatusT[TELESCOPE_READY].text, "FULLY OPERATIONAL");
-        else
-            sprintf(StatusT[TELESCOPE_READY].text, "%s", resp);
-        //parse somhow 0.0 to 1.0
-    }
+    setHistories(StatusT[TELESCOPE_READY].text, e+20);
+    bool succes = sendCommand(cmd);
     return succes;
 }
 
 bool Astelco::SetPosition(const float pos)
 {
+    bool success = false;
     if(0<sprintf(cmdString, "%d SET POSITION.INSTRUMENTAL.%s.TARGETPOS=%f\n", cmdDeviceInt, cmdDevice, pos))
-        return sendCommand(cmdString);
+    {
+        setHistories(StatusT[TARGET_POSITION].text);
+        success = sendCommand(cmdString);
+        return success;
+    }
     return false;
 }
 
@@ -627,49 +603,31 @@ const char* Astelco::GetStatusE(StatusE e)
 bool Astelco::GetUptime()
 {
     char cmd[254] = {0};
-    char resp[255] = {0};
     sprintf(cmd, "%d %s", cmdDeviceInt, "GET SERVER.UPTIME");
-    bool succes = sendCommand(cmd, resp);
-    StatusT[UPTIME].text = resp;
+    setHistories(StatusT[UPTIME].text);
+    bool succes = sendCommand(cmd);//increments cmdDeviceInt internally
     return succes;
 }
 
-bool Astelco::GetPosition(char *real, char *min_real, char *max_real)
+bool Astelco::GetPosition()
 {
     bool succes = false;
-    char resp[256] = {0};
-    char resp2[256] = {0};
     if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS\n", cmdDeviceInt, cmdDevice))
     {    
-        succes = sendCommand(cmdString, resp);
-        if(succes)
-        {
-            int i = GetWord(resp, resp2);
-            i += GetWord(&resp[++i], real);
-            LOGF_INFO("Real position: %s", real);
-        }            
+        setHistories(PositionT[REAL].text);          
+        succes = sendCommand(cmdString);
         succes = false;
     }
     if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS!MIN\n", cmdDeviceInt, cmdDevice))
     {    
-        succes = sendCommand(cmdString, resp);
-        if(succes)
-        {
-            int i = GetWord(resp, resp2);
-            i += GetWord(&resp[++i], min_real);
-            LOGF_INFO("Minimal position: %s", min_real);
-        }            
+        setHistories(PositionT[MIN].text);           
+        succes = sendCommand(cmdString);
         succes = false;
     }
     if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS!MAX\n", cmdDeviceInt, cmdDevice))
     {    
-        succes = sendCommand(cmdString, resp);
-        if(succes)
-        {
-            int i = GetWord(resp, resp2);
-            i += GetWord(&resp[++i], max_real);
-            LOGF_INFO("Maximal position: %s", max_real);
-        }            
+        setHistories(PositionT[MAX].text);             
+        succes = sendCommand(cmdString);
         //succes = false;
     }
 
@@ -736,8 +694,146 @@ bool Astelco::sendCommand(const char *cmd, char *resp)
 }
 
 bool Astelco::sendCommand(const char *cmd){
-    char resp[256]={0};
-    bool succes = sendCommand(cmd, resp);
-    // parse resp
-    return succes;
+
+    int nbytes_written=0, tty_rc = 0;
+    LOGF_DEBUG("CMD <%s>", cmd);
+    char cmd2[256] = {0};
+    sprintf(cmd2, "%s\n", cmd);
+    cmdDeviceInt++;
+    //if(cmd[0]!='\n')
+    {
+        if (!isSimulation())
+        {
+            tcflush(PortFD, TCIOFLUSH);
+            if ( (tty_rc = tty_write_string(PortFD, cmd2, &nbytes_written)) != TTY_OK)
+            {
+                char errorMessage[MAXRBUF];
+                tty_error_msg(tty_rc, errorMessage, MAXRBUF);
+                LOGF_ERROR("Telnet write error: %s", errorMessage);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool Astelco::readResponse(char *resp)
+{   
+    char tmp[256]={0};
+    int i = 0, nbytes_read = 0, tty_rc = 0;
+    resp[0] = '\0';
+    if (!isSimulation())
+    {
+        if ((tty_rc = tty_read_section(PortFD, tmp, '\n', ASTELCO_TIMEOUT, &nbytes_read)) != TTY_OK)
+        {
+            char errorMessage[MAXRBUF];
+            tty_error_msg(tty_rc, errorMessage, MAXRBUF);
+            LOGF_WARN("Telnet read error: %s", errorMessage);
+            return false;
+        }
+    }
+    tmp[nbytes_read - 1] = '\0';
+    while((tmp[i]<'0')||(tmp[i]>'9'))
+        i++;
+    sprintf(resp, "%s", &tmp[i]);
+    LOGF_INFO("RESPONSE: <%s>", resp);
+
+    return true;
+}
+
+void Astelco::setAnswer(const int i, const char *value)
+{
+    int myenum = history2[i];
+    if(myenum<255)
+    {
+        if((myenum-10)==POWER_STATE)
+        {
+            if(strcmp(value,"-1.0")==0)
+                sprintf(history[i], "EMERGENCY STOP");
+            else if(strcmp(value,"0.0")==0)
+                sprintf(history[i], "OFF");
+            else if(strcmp(value,"1.0")==0)
+                sprintf(history[i], "ON");
+            else
+                sprintf(history[i], "%s", value);
+        }
+        else if((myenum-10)==LIMIT_STATE)
+        {   
+            char msg1[25] = {0};
+            char msg2a[25] = {0};
+            char msg2b[25] = {0};
+            char msg3[25] = {0};
+            char msg4a[25] = {0};
+            char msg4b[25] = {0};
+            int ans = atoi(value);
+            if(ans&0x0080)
+                sprintf(msg1, "HW LIMIT BLOCKING");
+            if(ans&0x0001)
+                sprintf(msg2a, "MIN-HW");
+            if(ans&0x0002)
+                sprintf(msg2b, "MAX-HW");
+            if(ans&0x8000)
+                sprintf(msg3, "SW LIMIT BLOCKING");
+            if(ans&0x0100)
+                sprintf(msg4a, "MIN-SW");
+            if(ans&0x0200)
+                sprintf(msg4b, "MAX-SW");
+            sprintf(history[i], "%s (%s %s) %s (%s %s)", msg1, msg2a, msg2b, msg3, msg4a, msg4b);
+        }
+        else if((myenum-10)==MOTION_STATE)
+        {
+            char msg1[25] = {0};
+            char msg2[25] = {0};
+            char msg3[25] = {0};
+            char msg4[25] = {0};
+            char msg5[25] = {0};
+            char msg6[25] = {0};
+            int ans = atoi(value);
+            if(ans&0x01)
+                sprintf(msg1, "Axis_Moving");
+            if(ans&0x02)
+                sprintf(msg2, "Trajectory");
+            if(ans&0x04)
+                sprintf(msg3, "LIMIT_STATE");
+            if(ans&0x08)
+                sprintf(msg4, "Target");
+            if(ans&0x10)
+                sprintf(msg5, "Too_Fast_Move");
+            if(ans&0x20)
+                sprintf(msg6, "Unparking/ed");
+            if(ans&0x40)
+                sprintf(msg6, "Parking/ed");
+            sprintf(history[i], "%s %s %s %s %s %s", msg1, msg2, msg3, msg4, msg5, msg6);
+        }
+        else if((myenum-20)==GET)
+        {
+            if(strcmp(value,"-3.0")==0)
+                sprintf(history[i], "LOCAL MODE");
+            else if(strcmp(value,"-2.0")==0)
+                sprintf(history[i], "EMERGENCY STOP");
+            else if(strcmp(value,"-1.0")==0)
+                sprintf(history[i], "ERRORS block operation");
+            else if(strcmp(value,"0.0")==0)
+                sprintf(history[i], "SHUT DOWN");
+            else if(strcmp(value,"1.0")==0)
+                sprintf(history[i], "FULLY OPERATIONAL");
+            else
+                sprintf(history[i], "%s", value);
+            //parse somhow 0.0 to 1.0
+        } 
+    }
+    else
+        sprintf(history[i], "%s", value);
+    // update fields
+    IDSetText(&StatusTP, nullptr);
+    IDSetText(&PositionTP, nullptr);
+}
+
+int Astelco::parseAnswer(const char *resp, char *value)
+{
+    char word[256] = {0};
+    int i = GetWord(resp, word);
+    int idx = atoi(word);
+    sprintf(value, "%s", &(resp[++i]));
+    return idx;
 }
