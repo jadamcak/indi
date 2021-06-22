@@ -113,7 +113,7 @@ bool Astelco::initProperties()
     IUFillText(&StatusT[TARGET_DISTANCE], "TARGET_DISTANCE", "State", "NA");
     IUFillTextVector(&StatusTP, StatusT, STATUS_COUNT, getDeviceName(), "STATUS", "Status", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
     
-    IUFillNumber(&TargetPositionN[0], "GO TO", "Go To", "%3.2f", -50., 70., 0., 0.);
+    IUFillNumber(&TargetPositionN[0], "GO TO", "Go To", "%4.2f", -9999., 9999., 0., 0.);
     IUFillNumberVector(&TargetPositionNP, TargetPositionN, 1, getDeviceName(), "GOTO", "GoTo", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE);
     
     IUFillSwitch(&PositionS[0], "GETP", "Get Position", ISS_OFF);
@@ -184,13 +184,13 @@ void Astelco::setHistories(char *txt, uint8_t val)
 
 void Astelco::thread2()
 {
-    char resp[256] = {0};
-    char value[256] = {0};
-    int cmd = 0;
     bool thOn = false;
     thOn = (threadOn.load(std::memory_order_acquire) == true);
     while(thOn)
     {
+        int cmd = 0;
+        char resp[256] = {0};
+        char value[256] = {0};
         //read
         if(readResponse(resp))
         {
@@ -222,10 +222,10 @@ bool Astelco::Handshake_tcp()
 {
     PortFD = tcpConnection->getPortFD();  
     char resp[256]={0};
-    bool succes = sendCommand("\0", resp);
+    bool succes = sendCommand("", resp);
     if(!succes)
     {
-        succes = sendCommand("\0", resp);
+        succes = sendCommand("", resp);
         if(!succes)
             return false;
     } 
@@ -236,6 +236,9 @@ bool Astelco::Handshake_tcp()
     }
     char resp2[256]={0};
     SetLogin(LoginT[0].text, LoginT[1].text);
+    readResponse(resp);
+    readResponse(resp);
+    readResponse(resp);
     succes = sendCommand(loginString, resp);
     if(succes)
     {
@@ -253,7 +256,9 @@ bool Astelco::Handshake_tcp()
             TimerHit();
         }
         else
-            return false;  
+        {
+            return false; 
+        } 
         return succes;    
     }    
     return false;
@@ -438,7 +443,7 @@ bool Astelco::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 if (!GetPosition())
                 {
                     PositionSP.s = IPS_ALERT;
-                    LOGF_ERROR("Failed to switch to %s.",GetDevice(DOME));
+                    LOGF_ERROR("Failed to get position(limits) of %s.",cmdDevice);
                 }
                 else
                 {
@@ -525,7 +530,7 @@ bool Astelco::SetPosition(const float pos)
 
 bool Astelco::SetLogin(const char* usr, const char* pas)
 {
-    if(0<sprintf(loginString, "AUTH PLAIN \"%s\" \"%s\"", usr, pas))
+    if(0<sprintf(loginString, "AUTH PLAIN \"%s\" \"%s\" ", usr, pas))
         return true;
     return false;
 }
@@ -549,6 +554,31 @@ int Astelco::GetWord(const char* cmd, char *word)
     }
     word[i]='\0';
     return i;
+}
+
+int Astelco::GetValue(const char* cmd, char *word)
+{
+    int i = 0;
+    int j = 0;
+    while(cmd[i]!='=')
+    {
+        //word[i]=cmd[i];
+        i++;
+        if(cmd[i]=='\0')
+        {
+            word[j]='\0';
+            return j;
+        }
+    }
+    ++i;
+    while(cmd[i]!='\0')
+    {
+        word[j]=cmd[i];
+        i++;
+        j++;
+    }
+    word[j]='\0';
+    return j;
 }
 
 const char* Astelco::GetDevice(DeviceE e)
@@ -639,7 +669,7 @@ bool Astelco::sendCommand(const char *cmd, char *resp)
     int nbytes_read=0, nbytes_written=0, tty_rc = 0;
     LOGF_DEBUG("CMD <%s>", cmd);
     char cmd2[256] = {0};
-    sprintf(cmd2, "%s\n", cmd);
+    int i = sprintf(cmd2, "%s \r\n", cmd);
     char command[30] = {0};
     cmdDeviceInt++;
     //if(cmd[0]!='\n')
@@ -688,7 +718,7 @@ bool Astelco::sendCommand(const char *cmd, char *resp)
 
     resp[nbytes_read - 1] = '\0';
     LOGF_INFO("RESPONSE: <%s>", resp);
-    LOGF_DEBUG("RES <%s>", resp);
+//    LOGF_DEBUG("RES <%s>", resp);
 
     return true;
 }
@@ -698,7 +728,7 @@ bool Astelco::sendCommand(const char *cmd){
     int nbytes_written=0, tty_rc = 0;
     LOGF_DEBUG("CMD <%s>", cmd);
     char cmd2[256] = {0};
-    sprintf(cmd2, "%s\n", cmd);
+    sprintf(cmd2, "%s\r\n", cmd);
     cmdDeviceInt++;
     //if(cmd[0]!='\n')
     {
@@ -743,21 +773,26 @@ bool Astelco::readResponse(char *resp)
 
 void Astelco::setAnswer(const int i, const char *value)
 {
-    int myenum = history2[i];
-    if(myenum<255)
+    LOGF_DEBUG("%d %s", i, value);
+    if(i > -1)
     {
-        if((myenum-10)==POWER_STATE)
+        LOGF_DEBUG("%d %s", i, value);
+        int j = i%1000;
+        int myenum = history2[j];
+        if(myenum<255)
+        {
+            if((myenum-10)==POWER_STATE)
         {
             if(strcmp(value,"-1.0")==0)
-                sprintf(history[i], "EMERGENCY STOP");
+                sprintf(history[j], "EMERGENCY STOP");
             else if(strcmp(value,"0.0")==0)
-                sprintf(history[i], "OFF");
+                sprintf(history[j], "OFF");
             else if(strcmp(value,"1.0")==0)
-                sprintf(history[i], "ON");
+                sprintf(history[j], "ON");
             else
-                sprintf(history[i], "%s", value);
+                sprintf(history[j], "%s", value);
         }
-        else if((myenum-10)==LIMIT_STATE)
+            else if((myenum-10)==LIMIT_STATE)
         {   
             char msg1[25] = {0};
             char msg2a[25] = {0};
@@ -778,9 +813,9 @@ void Astelco::setAnswer(const int i, const char *value)
                 sprintf(msg4a, "MIN-SW");
             if(ans&0x0200)
                 sprintf(msg4b, "MAX-SW");
-            sprintf(history[i], "%s (%s %s) %s (%s %s)", msg1, msg2a, msg2b, msg3, msg4a, msg4b);
+            sprintf(history[j], "%s (%s %s) %s (%s %s)", msg1, msg2a, msg2b, msg3, msg4a, msg4b);
         }
-        else if((myenum-10)==MOTION_STATE)
+            else if((myenum-10)==MOTION_STATE)
         {
             char msg1[25] = {0};
             char msg2[25] = {0};
@@ -803,30 +838,38 @@ void Astelco::setAnswer(const int i, const char *value)
                 sprintf(msg6, "Unparking/ed");
             if(ans&0x40)
                 sprintf(msg6, "Parking/ed");
-            sprintf(history[i], "%s %s %s %s %s %s", msg1, msg2, msg3, msg4, msg5, msg6);
+            sprintf(history[j], "%s %s %s %s %s %s", msg1, msg2, msg3, msg4, msg5, msg6);
         }
-        else if((myenum-20)==GET)
+            else if((myenum-20)==GET)
         {
             if(strcmp(value,"-3.0")==0)
-                sprintf(history[i], "LOCAL MODE");
+                sprintf(history[j], "LOCAL MODE");
             else if(strcmp(value,"-2.0")==0)
-                sprintf(history[i], "EMERGENCY STOP");
+                sprintf(history[j], "EMERGENCY STOP");
             else if(strcmp(value,"-1.0")==0)
-                sprintf(history[i], "ERRORS block operation");
+                sprintf(history[j], "ERRORS block operation");
             else if(strcmp(value,"0.0")==0)
-                sprintf(history[i], "SHUT DOWN");
+                {
+                    sprintf(history[j], "SHUT DOWN");
+                    turnedOn = 0;
+                }
             else if(strcmp(value,"1.0")==0)
-                sprintf(history[i], "FULLY OPERATIONAL");
+                {
+                    sprintf(history[j], "FULLY OPERATIONAL");
+                    turnedOn = 1;
+                }
             else
-                sprintf(history[i], "%s", value);
+                sprintf(history[j], "%s", value);
             //parse somhow 0.0 to 1.0
         } 
+        }
+        else
+            sprintf(history[j], "%s", value);
+        // update fields
+        //LOGF_DEBUG("%d %s", j, history[j]);
+        IDSetText(&StatusTP, nullptr);
+        IDSetText(&PositionTP, nullptr);
     }
-    else
-        sprintf(history[i], "%s", value);
-    // update fields
-    IDSetText(&StatusTP, nullptr);
-    IDSetText(&PositionTP, nullptr);
 }
 
 int Astelco::parseAnswer(const char *resp, char *value)
@@ -834,6 +877,21 @@ int Astelco::parseAnswer(const char *resp, char *value)
     char word[256] = {0};
     int i = GetWord(resp, word);
     int idx = atoi(word);
-    sprintf(value, "%s", &(resp[++i]));
-    return idx;
+    if(idx == 0)
+    {
+        LOG_WARN(&(resp[++i]));
+        sprintf(value, "EE\0");
+        return -1;
+    }
+    i = GetValue(&(resp[++i]), word);
+
+    //sprintf(value, "%s", &(resp[++i]));
+    if(i>0)
+    {
+        //LOGF_DEBUG("%s %d", word, i);
+        sprintf(value, "%s", word);
+        //LOGF_DEBUG("%s %d", word, i);
+        return idx;
+    }
+    return -1;
 }

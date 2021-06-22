@@ -61,6 +61,7 @@ class Astelco : public INDI::DefaultDevice//, public INDI::Focuser
     bool SetLogin(const char* usr, const char* pas);
     bool SetDevice(const char* device);
     int GetWord(const char* cmd, char *word);
+    int GetValue(const char* cmd, char *word);
     bool GetPosition();
 
   private: 
