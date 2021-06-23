@@ -82,13 +82,30 @@ void ISSnoopDevice(XMLEle *root)
 Astelco::Astelco()
 {
     setVersion(1, 0);
+    FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE);
+}
+
+Astelco::~Astelco()
+{
+
+}
+
+void Astelco::ISGetProperties(const char *dev)
+{
+    if (dev != nullptr && strcmp(dev, getDeviceName()) != 0)
+        return;
+
+    INDI::Focuser::ISGetProperties(dev);
+
+    //defineProperty(&ModeSP);
+    //loadConfig(true, "Mode");
 }
 
 bool Astelco::initProperties()
 {
     INDI::DefaultDevice::initProperties();
 
-    setDriverInterface(AUX_INTERFACE|FOCUSER_INTERFACE|DOME_INTERFACE|DUSTCAP_INTERFACE);
+    setDriverInterface(AUX_INTERFACE|FOCUSER_INTERFACE|DOME_INTERFACE);//|DUSTCAP_INTERFACE);
     IUFillText(&LoginT[0], "NAME", "Username", "username");
     IUFillText(&LoginT[1], "PASS", "Password", "password");
     IUFillTextVector(&LoginTP, LoginT, 2, getDeviceName(), "Get Login", "Login", CONNECTION_TAB, IP_RW, 0, IPS_IDLE);
@@ -98,34 +115,39 @@ bool Astelco::initProperties()
     IUFillSwitch(&OnOffS[GET], "GET", "Get State", ISS_OFF);
     IUFillSwitchVector(&OnOffSP, OnOffS, ON_OFF_COUNT, getDeviceName(), "On/Off", "", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
     
-    IUFillSwitch(&DeviceS[DOME], "DOME", "Dome", ISS_OFF);
-    IUFillSwitch(&DeviceS[FOCUS], "FOCUS", "Focus", ISS_OFF);
-    IUFillSwitch(&DeviceS[COVER], "COVER", "Cover", ISS_OFF);
-    IUFillSwitchVector(&DeviceSP, DeviceS, DEVICE_COUNT, getDeviceName(), "Device", "", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    //IUFillSwitch(&DeviceS[DOME], "DOME", "Dome", ISS_OFF);
+    //IUFillSwitch(&DeviceS[FOCUS], "FOCUS", "Focus", ISS_OFF);
+    //IUFillSwitch(&DeviceS[COVER], "COVER", "Cover", ISS_OFF);
+    //IUFillSwitchVector(&DeviceSP, DeviceS, DEVICE_COUNT, getDeviceName(), "Device", "", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
     
-    IUFillText(&StatusT[UPTIME], "UPTIME", "Uptime", "NA");
-    IUFillText(&StatusT[TELESCOPE_READY], "TELESCOPE_READY", "Ready?", "NA");
+    IUFillText(&StatusMainT[UPTIME], "UPTIME", "Uptime", "NA");
+    IUFillText(&StatusMainT[TELESCOPE_READY], "TELESCOPE_READY", "Ready?", "NA");
+    IUFillTextVector(&StatusMainTP, StatusMainT, STATUS_MAIN_COUNT, getDeviceName(), "STATUS", "Status", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
+
     IUFillText(&StatusT[POWER_STATE], "POWER_STATE", "State", "NA");
     IUFillText(&StatusT[REAL_POSITION], "REAL_POSITION", "State", "NA");
     IUFillText(&StatusT[LIMIT_STATE], "LIMIT_STATE", "State", "NA");
     IUFillText(&StatusT[MOTION_STATE], "MOTION_STATE", "State", "NA");
     IUFillText(&StatusT[TARGET_POSITION], "TARGET_POSITION", "State", "NA");
+    IUFillText(&StatusT[OFFSET], "OFFSET", "State", "NA");
     IUFillText(&StatusT[TARGET_DISTANCE], "TARGET_DISTANCE", "State", "NA");
-    IUFillTextVector(&StatusTP, StatusT, STATUS_COUNT, getDeviceName(), "STATUS", "Status", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillTextVector(&StatusTP, StatusT, STATUS_COUNT, getDeviceName(), "STATUS", "Status", FOCUS_TAB, IP_RO, 60, IPS_IDLE);
     
     IUFillNumber(&TargetPositionN[0], "GO TO", "Go To", "%4.2f", -9999., 9999., 0., 0.);
-    IUFillNumberVector(&TargetPositionNP, TargetPositionN, 1, getDeviceName(), "GOTO", "GoTo", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE);
+    IUFillNumberVector(&TargetPositionNP, TargetPositionN, 1, getDeviceName(), "GOTO", "GoTo", FOCUS_TAB, IP_RW, 0, IPS_IDLE);
+    IUFillNumber(&TargetOffsetN[0], "OFFSET", "Offset", "%4.2f", -9999., 9999., 0., 0.);
+    IUFillNumberVector(&TargetOffsetNP, TargetOffsetN, 1, getDeviceName(), "TARGET OFFSET", "TargetOffset", FOCUS_TAB, IP_RW, 0, IPS_IDLE);
     
     IUFillSwitch(&PositionS[0], "GETP", "Get Position", ISS_OFF);
-    IUFillSwitchVector(&PositionSP, PositionS, 1, getDeviceName(), "Get Positions", "", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitchVector(&PositionSP, PositionS, 1, getDeviceName(), "Get Positions", "", FOCUS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
     IUFillText(&PositionT[REAL], "REAL_POSITION", "Real Position", "NA");
     IUFillText(&PositionT[MIN], "MIN_POSITION", "Min Position", "NA");
     IUFillText(&PositionT[MAX], "MAX_POSITION", "Max Position", "NA");
-    IUFillTextVector(&PositionTP, PositionT, POSITION_COUNT, getDeviceName(), "POSITON", "Position", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillTextVector(&PositionTP, PositionT, POSITION_COUNT, getDeviceName(), "POSITON", "Position", FOCUS_TAB, IP_RO, 60, IPS_IDLE);
     
     addAuxControls();
     defineProperty(&LoginTP);
-    deviceSet = false;
+    //deviceSet = false;
     initHistory(255);
     tcpConnection = new Connection::TCP(this);
     tcpConnection->registerHandshake([&]() { return Handshake_tcp(); });
@@ -141,19 +163,23 @@ bool Astelco::updateProperties()
     if (isConnected())
     {
         defineProperty(&OnOffSP);
-        defineProperty(&DeviceSP);
+        //defineProperty(&DeviceSP);
         defineProperty(&PositionSP);
         defineProperty(&PositionTP);
         defineProperty(&TargetPositionNP);
+        defineProperty(&TargetOffsetNP);
+        defineProperty(&StatusMainTP);
         defineProperty(&StatusTP);
     }
     else
     {
         deleteProperty(OnOffSP.name);
-        deleteProperty(DeviceSP.name);
+        //deleteProperty(DeviceSP.name);
         deleteProperty(PositionSP.name);
         deleteProperty(PositionTP.name);
         deleteProperty(TargetPositionNP.name); 
+        deleteProperty(TargetOffsetNP.name); 
+        deleteProperty(StatusMainTP.name);
         deleteProperty(StatusTP.name);
     }
 
@@ -175,11 +201,13 @@ void Astelco::initHistory(uint8_t val)
     }
 }
 
-void Astelco::setHistories(char *txt, uint8_t val)
+void Astelco::setHistories(char *txt, uint8_t val, DeviceE dev, PositionE pos)
 {
     int idx = cmdDeviceInt%1000;
     history[idx] = txt;
     history2[idx] = val;
+    history3[idx] = dev;
+    history4[idx] = pos;
 }
 
 void Astelco::thread2()
@@ -279,18 +307,17 @@ bool Astelco::ISNewNumber(const char *dev, const char *name, double values[], ch
         if (!strcmp(name, TargetPositionNP.name))
         {
             IUUpdateNumber(&TargetPositionNP, values, names, n);
-            if(deviceSet)
-            {
-                TargetPositionNP.s = IPS_OK;
-                IDSetNumber(&TargetPositionNP, nullptr);
-                return SetPosition(TargetPositionN[0].value);
-            }
-            else
-            {
-                LOG_WARN("NEED to choose DEVICE");
-                TargetPositionNP.s = IPS_ALERT;
-                return false;
-            }
+            TargetPositionNP.s = IPS_OK;
+            IDSetNumber(&TargetPositionNP, nullptr);
+            return SetPosition(TargetPositionN[0].value, FOCUS);
+        }
+
+        if (!strcmp(name, TargetOffsetNP.name))
+        {
+            IUUpdateNumber(&TargetOffsetNP, values, names, n);
+            TargetOffsetNP.s = IPS_OK;
+            IDSetNumber(&TargetOffsetNP, nullptr);
+            return SetPosition(TargetOffsetN[0].value, FOCUS);
         }
     }
     return INDI::DefaultDevice::ISNewNumber(dev, name, values, names, n);
@@ -371,6 +398,7 @@ bool Astelco::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
         }
     }
 
+/*
     if (!strcmp(name, DeviceSP.name))
     {
         IUResetSwitch(&DeviceSP);
@@ -433,35 +461,27 @@ bool Astelco::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             return true;
         }
     }
- 
+ /**/
+
     if (!strcmp(name, PositionSP.name))
     {
         IUResetSwitch(&PositionSP);
         if (!strcmp(PositionS[0].name, names[0]))
-        {   if(deviceSet)
+        {   if (!GetPosition(FOCUS))
             {
-                if (!GetPosition())
-                {
-                    PositionSP.s = IPS_ALERT;
-                    LOGF_ERROR("Failed to get position(limits) of %s.",cmdDevice);
-                }
-                else
-                {
-                    //PositionS[0].s = ISS_ON;
-                    PositionSP.s = IPS_OK;
-                }
-            }
-            else
-            {
-                LOG_WARN("NEED to choose DEVICE");
                 PositionSP.s = IPS_ALERT;
+                LOGF_ERROR("Failed to get position(limits) of %s.",GetDevice(FOCUS));
                 IDSetSwitch(&PositionSP, nullptr);
                 return false;
             }
+            else
+            {
+                //PositionS[0].s = ISS_ON;
+                PositionSP.s = IPS_OK;
+                IDSetSwitch(&PositionSP, nullptr);
+                return true;
+            }
         }
-            
-        IDSetSwitch(&PositionSP, nullptr);
-        return true;
     }
  
     return INDI::DefaultDevice::ISNewSwitch(dev, name, states, names, n);
@@ -473,23 +493,24 @@ void Astelco::TimerHit()
         return;
     GetUptime();
     OnOff(GET);
-    if((turnedOn>=1)&&(deviceSet))
+    if(turnedOn>=1)
     {
-        GetStatus(POWER_STATE);
-        GetStatus(REAL_POSITION);
-        GetStatus(LIMIT_STATE);
-        GetStatus(MOTION_STATE);
-        GetStatus(TARGET_POSITION);
-        GetStatus(TARGET_DISTANCE);
+        GetStatus(POWER_STATE, FOCUS);
+        GetStatus(REAL_POSITION, FOCUS);
+        GetStatus(LIMIT_STATE, FOCUS);
+        GetStatus(MOTION_STATE, FOCUS);
+        GetStatus(TARGET_POSITION, FOCUS);
+        GetStatus(OFFSET, FOCUS);
+        GetStatus(TARGET_DISTANCE, FOCUS);
     }
     SetTimer(getPollingPeriod());
 }
 
-bool Astelco::GetStatus(StatusE e)
+bool Astelco::GetStatus(StatusE e, DeviceE dev)
 {
     char cmd[255] = {0};
-    sprintf(cmd, "%d GET POSITION.INSTRUMENTAL.%s.%s", cmdDeviceInt, cmdDevice, GetStatusE(e));
-    setHistories(StatusT[e].text, e+10);
+    sprintf(cmd, "%d GET POSITION.INSTRUMENTAL.%s.%s", cmdDeviceInt, GetDevice(dev), GetStatusE(e));
+    setHistories(StatusT[e].text, e+10, dev);
     bool succes = sendCommand(cmd);
     return succes;
 }
@@ -511,17 +532,29 @@ bool Astelco::OnOff(OnOffE e)
         default:
         break;
     }
-    setHistories(StatusT[TELESCOPE_READY].text, e+20);
+    setHistories(StatusMainT[TELESCOPE_READY].text, e+20);
     bool succes = sendCommand(cmd);
     return succes;
 }
 
-bool Astelco::SetPosition(const float pos)
+bool Astelco::SetPosition(const float pos, DeviceE dev)
 {
     bool success = false;
-    if(0<sprintf(cmdString, "%d SET POSITION.INSTRUMENTAL.%s.TARGETPOS=%f\n", cmdDeviceInt, cmdDevice, pos))
+    if(0<sprintf(cmdString, "%d SET POSITION.INSTRUMENTAL.%s.TARGETPOS=%f\n", cmdDeviceInt, GetDevice(dev), pos))
     {
-        setHistories(StatusT[TARGET_POSITION].text);
+        setHistories(StatusT[TARGET_POSITION].text, 255, dev);
+        success = sendCommand(cmdString);
+        return success;
+    }
+    return false;
+}
+
+bool Astelco::SetOffsetPosition(const float pos, DeviceE dev)
+{
+    bool success = false;
+    if(0<sprintf(cmdString, "%d SET POSITION.INSTRUMENTAL.%s.OFFSET=%f\n", cmdDeviceInt, GetDevice(dev), pos))
+    {
+        setHistories(StatusT[OFFSET].text, 255, dev);
         success = sendCommand(cmdString);
         return success;
     }
@@ -535,12 +568,14 @@ bool Astelco::SetLogin(const char* usr, const char* pas)
     return false;
 }
 
+/*
 bool Astelco::SetDevice(const char* device)
 {
     if(0<sprintf(cmdDevice, "%s", device))
         return true;
     return false;
 }
+/**/
 
 int Astelco::GetWord(const char* cmd, char *word)
 {
@@ -562,7 +597,6 @@ int Astelco::GetValue(const char* cmd, char *word)
     int j = 0;
     while(cmd[i]!='=')
     {
-        //word[i]=cmd[i];
         i++;
         if(cmd[i]=='\0')
         {
@@ -620,6 +654,9 @@ const char* Astelco::GetStatusE(StatusE e)
         case TARGET_POSITION:
             return "TARGETPOS";
         break;
+        case OFFSET:
+            return "OFFSET";
+        break;
         case TARGET_DISTANCE:
             return "TARGETDISTANCE";
         break;
@@ -634,31 +671,30 @@ bool Astelco::GetUptime()
 {
     char cmd[254] = {0};
     sprintf(cmd, "%d %s", cmdDeviceInt, "GET SERVER.UPTIME");
-    setHistories(StatusT[UPTIME].text);
+    setHistories(StatusMainT[UPTIME].text);
     bool succes = sendCommand(cmd);//increments cmdDeviceInt internally
     return succes;
 }
 
-bool Astelco::GetPosition()
+bool Astelco::GetPosition(DeviceE dev)
 {
     bool succes = false;
-    if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS\n", cmdDeviceInt, cmdDevice))
+    if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS\n", cmdDeviceInt, GetDevice(dev)))
     {    
-        setHistories(PositionT[REAL].text);          
+        setHistories(PositionT[REAL].text, REAL+30, dev, REAL);          
         succes = sendCommand(cmdString);
         succes = false;
     }
-    if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS!MIN\n", cmdDeviceInt, cmdDevice))
+    if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS!MIN\n", cmdDeviceInt, GetDevice(dev)))
     {    
-        setHistories(PositionT[MIN].text);           
+        setHistories(PositionT[MIN].text, MIN+30, dev, MIN);           
         succes = sendCommand(cmdString);
         succes = false;
     }
-    if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS!MAX\n", cmdDeviceInt, cmdDevice))
+    if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS!MAX\n", cmdDeviceInt, GetDevice(dev)))
     {    
-        setHistories(PositionT[MAX].text);             
+        setHistories(PositionT[MAX].text, MAX+30, dev, MAX);             
         succes = sendCommand(cmdString);
-        //succes = false;
     }
 
     return succes;
@@ -669,7 +705,8 @@ bool Astelco::sendCommand(const char *cmd, char *resp)
     int nbytes_read=0, nbytes_written=0, tty_rc = 0;
     LOGF_DEBUG("CMD <%s>", cmd);
     char cmd2[256] = {0};
-    int i = sprintf(cmd2, "%s \r\n", cmd);
+    //int i = 
+    sprintf(cmd2, "%s \r\n", cmd);
     char command[30] = {0};
     cmdDeviceInt++;
     //if(cmd[0]!='\n')
@@ -718,7 +755,6 @@ bool Astelco::sendCommand(const char *cmd, char *resp)
 
     resp[nbytes_read - 1] = '\0';
     LOGF_INFO("RESPONSE: <%s>", resp);
-//    LOGF_DEBUG("RES <%s>", resp);
 
     return true;
 }
@@ -782,91 +818,105 @@ void Astelco::setAnswer(const int i, const char *value)
         if(myenum<255)
         {
             if((myenum-10)==POWER_STATE)
-        {
-            if(strcmp(value,"-1.0")==0)
-                sprintf(history[j], "EMERGENCY STOP");
-            else if(strcmp(value,"0.0")==0)
-                sprintf(history[j], "OFF");
-            else if(strcmp(value,"1.0")==0)
-                sprintf(history[j], "ON");
-            else
-                sprintf(history[j], "%s", value);
-        }
+            {
+                if(strcmp(value,"-1.0")==0)
+                    sprintf(history[j], "EMERGENCY STOP");
+                else if(strcmp(value,"0.0")==0)
+                    sprintf(history[j], "OFF");
+                else if(strcmp(value,"1.0")==0)
+                    sprintf(history[j], "ON");
+                else
+                    sprintf(history[j], "%s", value);
+            }
             else if((myenum-10)==LIMIT_STATE)
-        {   
-            char msg1[25] = {0};
-            char msg2a[25] = {0};
-            char msg2b[25] = {0};
-            char msg3[25] = {0};
-            char msg4a[25] = {0};
-            char msg4b[25] = {0};
-            int ans = atoi(value);
-            if(ans&0x0080)
-                sprintf(msg1, "HW LIMIT BLOCKING");
-            if(ans&0x0001)
-                sprintf(msg2a, "MIN-HW");
-            if(ans&0x0002)
-                sprintf(msg2b, "MAX-HW");
-            if(ans&0x8000)
-                sprintf(msg3, "SW LIMIT BLOCKING");
-            if(ans&0x0100)
-                sprintf(msg4a, "MIN-SW");
-            if(ans&0x0200)
-                sprintf(msg4b, "MAX-SW");
-            sprintf(history[j], "%s (%s %s) %s (%s %s)", msg1, msg2a, msg2b, msg3, msg4a, msg4b);
-        }
+            {   
+                char msg1[25] = {0};
+                char msg2a[25] = {0};
+                char msg2b[25] = {0};
+                char msg3[25] = {0};
+                char msg4a[25] = {0};
+                char msg4b[25] = {0};
+                int ans = atoi(value);
+                if(ans&0x0080)
+                    sprintf(msg1, "HW LIMIT BLOCKING");
+                if(ans&0x0001)
+                    sprintf(msg2a, "MIN-HW");
+                if(ans&0x0002)
+                    sprintf(msg2b, "MAX-HW");
+                if(ans&0x8000)
+                    sprintf(msg3, "SW LIMIT BLOCKING");
+                if(ans&0x0100)
+                    sprintf(msg4a, "MIN-SW");
+                if(ans&0x0200)
+                    sprintf(msg4b, "MAX-SW");
+                sprintf(history[j], "%s (%s %s) %s (%s %s)", msg1, msg2a, msg2b, msg3, msg4a, msg4b);
+            }
             else if((myenum-10)==MOTION_STATE)
-        {
-            char msg1[25] = {0};
-            char msg2[25] = {0};
-            char msg3[25] = {0};
-            char msg4[25] = {0};
-            char msg5[25] = {0};
-            char msg6[25] = {0};
-            int ans = atoi(value);
-            if(ans&0x01)
-                sprintf(msg1, "Axis_Moving");
-            if(ans&0x02)
-                sprintf(msg2, "Trajectory");
-            if(ans&0x04)
-                sprintf(msg3, "LIMIT_STATE");
-            if(ans&0x08)
-                sprintf(msg4, "Target");
-            if(ans&0x10)
-                sprintf(msg5, "Too_Fast_Move");
-            if(ans&0x20)
-                sprintf(msg6, "Unparking/ed");
-            if(ans&0x40)
-                sprintf(msg6, "Parking/ed");
-            sprintf(history[j], "%s %s %s %s %s %s", msg1, msg2, msg3, msg4, msg5, msg6);
-        }
+            {
+                char msg1[25] = {0};
+                char msg2[25] = {0};
+                char msg3[25] = {0};
+                char msg4[25] = {0};
+                char msg5[25] = {0};
+                char msg6[25] = {0};
+                int ans = atoi(value);
+                if(ans&0x01)
+                    sprintf(msg1, "Axis_Moving");
+                if(ans&0x02)
+                    sprintf(msg2, "Trajectory");
+                if(ans&0x04)
+                    sprintf(msg3, "LIMIT_STATE");
+                if(ans&0x08)
+                    sprintf(msg4, "Target");
+                if(ans&0x10)
+                    sprintf(msg5, "Too_Fast_Move");
+                if(ans&0x20)
+                    sprintf(msg6, "Unparking/ed");
+                if(ans&0x40)
+                    sprintf(msg6, "Parking/ed");
+                sprintf(history[j], "%s %s %s %s %s %s", msg1, msg2, msg3, msg4, msg5, msg6);
+            }
+            else if((myenum-10)==REAL_POSITION)
+            {
+                axis[history3[j]][REAL] = atof(value);
+                sprintf(history[j], "%s", value);
+            } 
+            else if((myenum-10)==OFFSET)
+            {
+                axis[history3[j]][REAL] = atof(value);
+                sprintf(history[j], "%s", value);
+            } 
             else if((myenum-20)==GET)
-        {
-            if(strcmp(value,"-3.0")==0)
-                sprintf(history[j], "LOCAL MODE");
-            else if(strcmp(value,"-2.0")==0)
-                sprintf(history[j], "EMERGENCY STOP");
-            else if(strcmp(value,"-1.0")==0)
-                sprintf(history[j], "ERRORS block operation");
-            else if(strcmp(value,"0.0")==0)
+            {
+                if(strcmp(value,"-3.0")==0)
+                    sprintf(history[j], "LOCAL MODE");
+                else if(strcmp(value,"-2.0")==0)
+                    sprintf(history[j], "EMERGENCY STOP");
+                else if(strcmp(value,"-1.0")==0)
+                    sprintf(history[j], "ERRORS block operation");
+                else if(strcmp(value,"0.0")==0)
                 {
                     sprintf(history[j], "SHUT DOWN");
                     turnedOn = 0;
                 }
-            else if(strcmp(value,"1.0")==0)
+                else if(strcmp(value,"1.0")==0)
                 {
                     sprintf(history[j], "FULLY OPERATIONAL");
                     turnedOn = 1;
                 }
-            else
-                sprintf(history[j], "%s", value);
+                else
+                    sprintf(history[j], "%s", value);
             //parse somhow 0.0 to 1.0
-        } 
+            } 
+            else if((myenum-30)==history3[j])
+            {
+                axis[history3[j]][history4[j]] = atof(value);
+                sprintf(history[j], "%s", value);
+            } 
         }
         else
             sprintf(history[j], "%s", value);
         // update fields
-        //LOGF_DEBUG("%d %s", j, history[j]);
         IDSetText(&StatusTP, nullptr);
         IDSetText(&PositionTP, nullptr);
     }
@@ -880,18 +930,70 @@ int Astelco::parseAnswer(const char *resp, char *value)
     if(idx == 0)
     {
         LOG_WARN(&(resp[++i]));
-        sprintf(value, "EE\0");
+        sprintf(value, "EE");
         return -1;
     }
     i = GetValue(&(resp[++i]), word);
-
-    //sprintf(value, "%s", &(resp[++i]));
     if(i>0)
     {
-        //LOGF_DEBUG("%s %d", word, i);
         sprintf(value, "%s", word);
-        //LOGF_DEBUG("%s %d", word, i);
         return idx;
     }
     return -1;
+}
+
+IPState Astelco::MoveAbsFocuser(uint32_t targetTicks)
+{
+    float target = (float)targetTicks;
+    return MoveAbsFocuser(target/ticks_mm);
+}
+
+IPState Astelco::MoveRelFocuser(FI::FocusDirection dir, uint32_t ticks)
+{
+    float target{0};
+    if(dir==FI::FOCUS_INWARD)
+        target = (float)ticks * (-1.0);
+    if(dir==FI::FOCUS_OUTWARD)
+        target = (float)ticks;
+    return MoveRelFocuser(target/ticks_mm);
+}
+
+IPState Astelco::MoveAbsFocuser(const float mm)
+{
+    if(SetPosition(mm, FOCUS))
+        return IPS_BUSY;
+    return IPS_ALERT;
+}
+
+IPState Astelco::MoveRelFocuser(const float mm)
+{
+    if(GetStatus(REAL_POSITION, FOCUS))
+    {
+        int idx = cmdDeviceInt -1;
+        sleep(5*ASTELCO_TIMEOUT);
+        float new_mm = axis[history3[idx]][REAL] + mm;
+        if(SetPosition(new_mm, FOCUS))
+            return IPS_BUSY;
+    }
+    return IPS_ALERT;
+}
+
+IPState Astelco::OffsetAbsFocuser(const float mm)
+{
+    if(SetOffsetPosition(mm, FOCUS))
+        return IPS_BUSY;
+    return IPS_ALERT;
+}
+
+IPState Astelco::OffsetRelFocuser(const float mm)
+{
+     if(GetStatus(OFFSET, FOCUS))
+    {
+        int idx = cmdDeviceInt -1;
+        sleep(5*ASTELCO_TIMEOUT);
+        float new_mm = axis[history3[idx]][REAL] + mm;
+        if(SetOffsetPosition(new_mm, FOCUS))
+            return IPS_BUSY;
+    }
+    return IPS_ALERT;
 }
