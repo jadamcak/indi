@@ -287,6 +287,10 @@
             <driver name="Celestron SCT">indi_celestron_sct_focus</driver>
             <version>1.0</version>
         </device>
+        <device label="Astelco" manufacturer="ASTRO.SK">
+            <driver name="Astelco">indi_astelco</driver>
+            <version>1.0</version>
+        </device>
         <device label="AAF2">
             <driver name="AAF2">indi_aaf2_focus</driver>
             <version>1.0</version>
@@ -565,10 +569,6 @@
         </device>
         <device label="Netio" manufacturer="ASTRO.SK">
             <driver name="Netio">indi_netio</driver>
-            <version>1.0</version>
-        </device>
-        <device label="Astelco" manufacturer="ASTRO.SK">
-            <driver name="Astelco">indi_astelco</driver>
             <version>1.0</version>
         </device>
         <device label="GPUSB">

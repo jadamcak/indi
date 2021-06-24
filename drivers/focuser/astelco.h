@@ -67,6 +67,9 @@ class Astelco : public INDI::Focuser
     IPState OffsetAbsFocuser(const float mm);
     IPState OffsetRelFocuser(const float mm);
 
+    bool MoveRelFocus(const float mm);
+    bool OffsetRelFocus(const float mm);
+
     bool SetLogin(const char* usr, const char* pas);
     bool SetDevice(const char* device);
     int GetWord(const char* cmd, char *word);
@@ -155,15 +158,30 @@ class Astelco : public INDI::Focuser
     const char* GetDevice(DeviceE e); 
     INumber TargetPositionN[1];
     INumberVectorProperty TargetPositionNP;
+
+    ISwitch Goto1S[2];
+    ISwitchVectorProperty Goto1SP;
+    ISwitch Goto2S[2];
+    ISwitchVectorProperty Goto2SP;
+    ISwitch Goto3S[2];
+    ISwitchVectorProperty Goto3SP;
+    
     INumber TargetOffsetN[1];
     INumberVectorProperty TargetOffsetNP;
+
+    ISwitch Offset1S[2];
+    ISwitchVectorProperty Offset1SP;
+    ISwitch Offset2S[2];
+    ISwitchVectorProperty Offset2SP;
+    ISwitch Offset3S[2];
+    ISwitchVectorProperty Offset3SP;
 
     ISwitch PositionS[1];
     ISwitchVectorProperty PositionSP;
 
     enum PositionE
     {
-      REAL,
+      //REAL,
       MIN,
       MAX,
       POSITION_COUNT
@@ -190,6 +208,6 @@ class Astelco : public INDI::Focuser
     bool SetPosition(const float pos, DeviceE dev);
     bool SetOffsetPosition(const float pos, DeviceE dev);
     void setHistories(char *txt, uint8_t val = 255, DeviceE dev = DEVICE_COUNT, PositionE pos = POSITION_COUNT);
-    float axis[DEVICE_COUNT][POSITION_COUNT];
+    float axis[DEVICE_COUNT+1][POSITION_COUNT+1];
 
 };

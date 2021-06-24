@@ -97,15 +97,13 @@ void Astelco::ISGetProperties(const char *dev)
 
     INDI::Focuser::ISGetProperties(dev);
 
-    //defineProperty(&ModeSP);
-    //loadConfig(true, "Mode");
 }
 
 bool Astelco::initProperties()
 {
     INDI::DefaultDevice::initProperties();
 
-    setDriverInterface(AUX_INTERFACE|FOCUSER_INTERFACE|DOME_INTERFACE);//|DUSTCAP_INTERFACE);
+    setDriverInterface(AUX_INTERFACE|FOCUSER_INTERFACE);//|DOME_INTERFACE);//|DUSTCAP_INTERFACE);
     IUFillText(&LoginT[0], "NAME", "Username", "username");
     IUFillText(&LoginT[1], "PASS", "Password", "password");
     IUFillTextVector(&LoginTP, LoginT, 2, getDeviceName(), "Get Login", "Login", CONNECTION_TAB, IP_RW, 0, IPS_IDLE);
@@ -122,28 +120,52 @@ bool Astelco::initProperties()
     
     IUFillText(&StatusMainT[UPTIME], "UPTIME", "Uptime", "NA");
     IUFillText(&StatusMainT[TELESCOPE_READY], "TELESCOPE_READY", "Ready?", "NA");
-    IUFillTextVector(&StatusMainTP, StatusMainT, STATUS_MAIN_COUNT, getDeviceName(), "STATUS", "Status", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillTextVector(&StatusMainTP, StatusMainT, STATUS_MAIN_COUNT, getDeviceName(), "STATUS TELESCOPE", "Status Telescope", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
 
-    IUFillText(&StatusT[POWER_STATE], "POWER_STATE", "State", "NA");
-    IUFillText(&StatusT[REAL_POSITION], "REAL_POSITION", "State", "NA");
-    IUFillText(&StatusT[LIMIT_STATE], "LIMIT_STATE", "State", "NA");
-    IUFillText(&StatusT[MOTION_STATE], "MOTION_STATE", "State", "NA");
-    IUFillText(&StatusT[TARGET_POSITION], "TARGET_POSITION", "State", "NA");
-    IUFillText(&StatusT[OFFSET], "OFFSET", "State", "NA");
-    IUFillText(&StatusT[TARGET_DISTANCE], "TARGET_DISTANCE", "State", "NA");
-    IUFillTextVector(&StatusTP, StatusT, STATUS_COUNT, getDeviceName(), "STATUS", "Status", FOCUS_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillText(&StatusT[POWER_STATE], "POWER_STATE", "Power State", "NA");
+    IUFillText(&StatusT[REAL_POSITION], "REAL_POSITION", "Real Position", "NA");
+    IUFillText(&StatusT[LIMIT_STATE], "LIMIT_STATE", "Limit State", "NA");
+    IUFillText(&StatusT[MOTION_STATE], "MOTION_STATE", "Motion State", "NA");
+    IUFillText(&StatusT[TARGET_POSITION], "TARGET_POSITION", "Target Position", "NA");
+    IUFillText(&StatusT[OFFSET], "OFFSET", "Offset", "NA");
+    IUFillText(&StatusT[TARGET_DISTANCE], "TARGET_DISTANCE", "Target Distance", "NA");
+    IUFillTextVector(&StatusTP, StatusT, STATUS_COUNT, getDeviceName(), "STATUS FOCUS", "Status focus", FOCUS_TAB, IP_RO, 60, IPS_IDLE);
     
     IUFillNumber(&TargetPositionN[0], "GO TO", "Go To", "%4.2f", -9999., 9999., 0., 0.);
     IUFillNumberVector(&TargetPositionNP, TargetPositionN, 1, getDeviceName(), "GOTO", "GoTo", FOCUS_TAB, IP_RW, 0, IPS_IDLE);
+    IUFillSwitch(&Goto1S[0], "-0.5mm", "-0.5mm", ISS_OFF);
+    IUFillSwitch(&Goto1S[1], "+0.5mm", "+0.5mm", ISS_OFF);
+    IUFillSwitchVector(&Goto1SP, Goto1S, 2, getDeviceName(), "Target 0.5", "Target", FOCUS_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
+    
+    IUFillSwitch(&Goto2S[0], "-0.1mm", "-0.1mm", ISS_OFF);
+    IUFillSwitch(&Goto2S[1], "+0.1mm", "+0.1mm", ISS_OFF);
+    IUFillSwitchVector(&Goto2SP, Goto2S, 2, getDeviceName(), "Target 0.1", "Target", FOCUS_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
+
+    IUFillSwitch(&Goto3S[0], "-0.05mm", "-0.05mm", ISS_OFF);    
+    IUFillSwitch(&Goto3S[1], "+0.05mm", "+0.05mm", ISS_OFF);
+    IUFillSwitchVector(&Goto3SP, Goto3S, 2, getDeviceName(), "Target 0.05", "Target", FOCUS_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
+    
     IUFillNumber(&TargetOffsetN[0], "OFFSET", "Offset", "%4.2f", -9999., 9999., 0., 0.);
     IUFillNumberVector(&TargetOffsetNP, TargetOffsetN, 1, getDeviceName(), "TARGET OFFSET", "TargetOffset", FOCUS_TAB, IP_RW, 0, IPS_IDLE);
+    IUFillSwitch(&Offset1S[0], "-0.5mm", "-0.5mm", ISS_OFF);
+    IUFillSwitch(&Offset1S[1], "+0.5mm", "+0.5mm", ISS_OFF);
+    IUFillSwitchVector(&Offset1SP, Offset1S, 2, getDeviceName(), "Offset 0.5", "Offset", FOCUS_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
     
-    IUFillSwitch(&PositionS[0], "GETP", "Get Position", ISS_OFF);
-    IUFillSwitchVector(&PositionSP, PositionS, 1, getDeviceName(), "Get Positions", "", FOCUS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
-    IUFillText(&PositionT[REAL], "REAL_POSITION", "Real Position", "NA");
+    IUFillSwitch(&Offset2S[0], "-0.1mm", "-0.1mm", ISS_OFF);
+    IUFillSwitch(&Offset2S[1], "+0.1mm", "+0.1mm", ISS_OFF);
+    IUFillSwitchVector(&Offset2SP, Offset2S, 2, getDeviceName(), "Offset 0.1", "Offset", FOCUS_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
+
+    IUFillSwitch(&Offset3S[0], "-0.05mm", "-0.05mm", ISS_OFF);    
+    IUFillSwitch(&Offset3S[1], "+0.05mm", "+0.05mm", ISS_OFF);
+    IUFillSwitchVector(&Offset3SP, Offset3S, 2, getDeviceName(), "Offset 0.05", "Offset", FOCUS_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
+
+    //IUFillSwitch(&PositionS[0], "GETP", "Get Position", ISS_OFF);
+    //IUFillSwitchVector(&PositionSP, PositionS, 1, getDeviceName(), "Get Positions", "", FOCUS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    //IUFillText(&PositionT[REAL], "REAL_POSITION", "Real Position", "NA");
     IUFillText(&PositionT[MIN], "MIN_POSITION", "Min Position", "NA");
     IUFillText(&PositionT[MAX], "MAX_POSITION", "Max Position", "NA");
-    IUFillTextVector(&PositionTP, PositionT, POSITION_COUNT, getDeviceName(), "POSITON", "Position", FOCUS_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillTextVector(&PositionTP, PositionT, POSITION_COUNT, getDeviceName(), "POSITON", "Position Limits", FOCUS_TAB, IP_RO, 60, IPS_IDLE);
+
     
     addAuxControls();
     defineProperty(&LoginTP);
@@ -164,10 +186,16 @@ bool Astelco::updateProperties()
     {
         defineProperty(&OnOffSP);
         //defineProperty(&DeviceSP);
-        defineProperty(&PositionSP);
+        //defineProperty(&PositionSP);
         defineProperty(&PositionTP);
         defineProperty(&TargetPositionNP);
+        defineProperty(&Goto1SP);
+        defineProperty(&Goto2SP);
+        defineProperty(&Goto3SP);
         defineProperty(&TargetOffsetNP);
+        defineProperty(&Offset1SP);
+        defineProperty(&Offset2SP);
+        defineProperty(&Offset3SP);
         defineProperty(&StatusMainTP);
         defineProperty(&StatusTP);
     }
@@ -175,10 +203,16 @@ bool Astelco::updateProperties()
     {
         deleteProperty(OnOffSP.name);
         //deleteProperty(DeviceSP.name);
-        deleteProperty(PositionSP.name);
+        //deleteProperty(PositionSP.name);
         deleteProperty(PositionTP.name);
         deleteProperty(TargetPositionNP.name); 
+        deleteProperty(Goto1SP.name); 
+        deleteProperty(Goto2SP.name); 
+        deleteProperty(Goto3SP.name); 
         deleteProperty(TargetOffsetNP.name); 
+        deleteProperty(Offset1SP.name); 
+        deleteProperty(Offset2SP.name); 
+        deleteProperty(Offset3SP.name); 
         deleteProperty(StatusMainTP.name);
         deleteProperty(StatusTP.name);
     }
@@ -317,7 +351,7 @@ bool Astelco::ISNewNumber(const char *dev, const char *name, double values[], ch
             IUUpdateNumber(&TargetOffsetNP, values, names, n);
             TargetOffsetNP.s = IPS_OK;
             IDSetNumber(&TargetOffsetNP, nullptr);
-            return SetPosition(TargetOffsetN[0].value, FOCUS);
+            return SetOffsetPosition(TargetOffsetN[0].value, FOCUS);
         }
     }
     return INDI::DefaultDevice::ISNewNumber(dev, name, values, names, n);
@@ -483,7 +517,207 @@ bool Astelco::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             }
         }
     }
- 
+
+    // prikazy na prestavenie Watec Gain
+    if (!strcmp(name, Goto1SP.name))
+    {
+        if (IUUpdateSwitch(&Goto1SP, states, names, n) < 0)
+            return false;
+
+        if (Goto1S[0].s == ISS_ON)
+        {
+            if( ! MoveRelFocus(-0.5) )
+            {
+                IUResetSwitch(&Goto1SP);
+                Goto1SP.s = IPS_ALERT;
+                LOG_ERROR(" AddGain failed. ");
+                IDSetSwitch(&Goto1SP, nullptr);
+                return false;
+            }
+        }
+        else if (Goto1S[1].s == ISS_ON)
+        {
+            if( ! MoveRelFocus(+0.5) )
+            {
+                IUResetSwitch(&Goto1SP);
+                Goto1SP.s = IPS_ALERT;
+                LOG_ERROR(" AddGain failed. ");
+                IDSetSwitch(&Goto1SP, nullptr);
+                return false;
+            }
+        }
+        IUResetSwitch(&Goto1SP);         
+        Goto1SP.s = IPS_OK;
+        IDSetSwitch(&Goto1SP, nullptr);
+        return true;
+    }
+    
+    if (!strcmp(name, Goto2SP.name))
+    {
+        if (IUUpdateSwitch(&Goto2SP, states, names, n) < 0)
+            return false;
+
+        if (Goto2S[0].s == ISS_ON)
+        {
+            if( ! MoveRelFocus(-0.1) )
+            {
+                IUResetSwitch(&Goto2SP);
+                Goto2SP.s = IPS_ALERT;
+                LOG_ERROR(" AddGain failed. ");
+                IDSetSwitch(&Goto2SP, nullptr);
+                return false;
+            }
+        }
+        else if (Goto2S[1].s == ISS_ON)
+        {
+            if( ! MoveRelFocus(+0.1) )
+            {
+                IUResetSwitch(&Goto2SP);
+                Goto2SP.s = IPS_ALERT;
+                LOG_ERROR(" AddGain failed. ");
+                IDSetSwitch(&Goto2SP, nullptr);
+                return false;
+            }
+        }
+        IUResetSwitch(&Goto2SP);         
+        Goto2SP.s = IPS_OK;
+        IDSetSwitch(&Goto2SP, nullptr);
+        return true;
+    }
+    
+    if (!strcmp(name, Goto3SP.name))
+    {
+        if (IUUpdateSwitch(&Goto3SP, states, names, n) < 0)
+            return false;
+
+        if (Goto3S[0].s == ISS_ON)
+        {
+            if( ! MoveRelFocus(-0.05) )
+            {
+                IUResetSwitch(&Goto3SP);
+                Goto3SP.s = IPS_ALERT;
+                LOG_ERROR(" AddGain failed. ");
+                IDSetSwitch(&Goto3SP, nullptr);
+                return false;
+            }
+        }
+        else if (Goto3S[1].s == ISS_ON)
+        {
+            if( ! MoveRelFocus(+0.05) )
+            {
+                IUResetSwitch(&Goto3SP);
+                Goto3SP.s = IPS_ALERT;
+                LOG_ERROR(" AddGain failed. ");
+                IDSetSwitch(&Goto3SP, nullptr);
+                return false;
+            }
+        }
+        IUResetSwitch(&Goto3SP);         
+        Goto3SP.s = IPS_OK;
+        IDSetSwitch(&Goto3SP, nullptr);
+        return true;
+    }
+    
+    if (!strcmp(name, Offset1SP.name))
+    {
+        if (IUUpdateSwitch(&Offset1SP, states, names, n) < 0)
+            return false;
+
+        if (Offset1S[0].s == ISS_ON)
+        {
+            if( ! OffsetRelFocus(-0.5) )
+            {
+                IUResetSwitch(&Offset1SP);
+                Offset1SP.s = IPS_ALERT;
+                LOG_ERROR(" AddGain failed. ");
+                IDSetSwitch(&Offset1SP, nullptr);
+                return false;
+            }
+        }
+        else if (Offset1S[1].s == ISS_ON)
+        {
+            if( ! OffsetRelFocus(+0.5) )
+            {
+                IUResetSwitch(&Offset1SP);
+                Offset1SP.s = IPS_ALERT;
+                LOG_ERROR(" AddGain failed. ");
+                IDSetSwitch(&Offset1SP, nullptr);
+                return false;
+            }
+        }
+        IUResetSwitch(&Offset1SP);         
+        Offset1SP.s = IPS_OK;
+        IDSetSwitch(&Offset1SP, nullptr);
+        return true;
+    }
+    
+    if (!strcmp(name, Offset2SP.name))
+    {
+        if (IUUpdateSwitch(&Offset2SP, states, names, n) < 0)
+            return false;
+
+        if (Offset2S[0].s == ISS_ON)
+        {
+            if( ! OffsetRelFocus(-0.1) )
+            {
+                IUResetSwitch(&Offset2SP);
+                Offset2SP.s = IPS_ALERT;
+                LOG_ERROR(" AddGain failed. ");
+                IDSetSwitch(&Offset2SP, nullptr);
+                return false;
+            }
+        }
+        else if (Offset2S[1].s == ISS_ON)
+        {
+            if( ! OffsetRelFocus(+0.1) )
+            {
+                IUResetSwitch(&Offset2SP);
+                Offset2SP.s = IPS_ALERT;
+                LOG_ERROR(" AddGain failed. ");
+                IDSetSwitch(&Offset2SP, nullptr);
+                return false;
+            }
+        }
+        IUResetSwitch(&Offset2SP);         
+        Offset2SP.s = IPS_OK;
+        IDSetSwitch(&Offset2SP, nullptr);
+        return true;
+    }
+    
+    if (!strcmp(name, Offset3SP.name))
+    {
+        if (IUUpdateSwitch(&Offset3SP, states, names, n) < 0)
+            return false;
+
+        if (Offset3S[0].s == ISS_ON)
+        {
+            if( ! OffsetRelFocus(-0.05) )
+            {
+                IUResetSwitch(&Offset3SP);
+                Offset3SP.s = IPS_ALERT;
+                LOG_ERROR(" AddGain failed. ");
+                IDSetSwitch(&Offset3SP, nullptr);
+                return false;
+            }
+        }
+        else if (Offset3S[1].s == ISS_ON)
+        {
+            if( ! OffsetRelFocus(+0.05) )
+            {
+                IUResetSwitch(&Offset3SP);
+                Offset3SP.s = IPS_ALERT;
+                LOG_ERROR(" AddGain failed. ");
+                IDSetSwitch(&Offset3SP, nullptr);
+                return false;
+            }
+        }
+        IUResetSwitch(&Offset3SP);         
+        Offset3SP.s = IPS_OK;
+        IDSetSwitch(&Offset3SP, nullptr);
+        return true;
+    }
+    
+    
     return INDI::DefaultDevice::ISNewSwitch(dev, name, states, names, n);
 }
 
@@ -493,6 +727,7 @@ void Astelco::TimerHit()
         return;
     GetUptime();
     OnOff(GET);
+    GetPosition(FOCUS);
     if(turnedOn>=1)
     {
         GetStatus(POWER_STATE, FOCUS);
@@ -504,6 +739,7 @@ void Astelco::TimerHit()
         GetStatus(TARGET_DISTANCE, FOCUS);
     }
     SetTimer(getPollingPeriod());
+    //update texts fields???
 }
 
 bool Astelco::GetStatus(StatusE e, DeviceE dev)
@@ -679,12 +915,14 @@ bool Astelco::GetUptime()
 bool Astelco::GetPosition(DeviceE dev)
 {
     bool succes = false;
+    /*
     if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS\n", cmdDeviceInt, GetDevice(dev)))
     {    
         setHistories(PositionT[REAL].text, REAL+30, dev, REAL);          
         succes = sendCommand(cmdString);
         succes = false;
     }
+    /**/
     if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS!MIN\n", cmdDeviceInt, GetDevice(dev)))
     {    
         setHistories(PositionT[MIN].text, MIN+30, dev, MIN);           
@@ -809,10 +1047,10 @@ bool Astelco::readResponse(char *resp)
 
 void Astelco::setAnswer(const int i, const char *value)
 {
-    LOGF_DEBUG("%d %s", i, value);
+    //LOGF_DEBUG("%d %s", i, value);
     if(i > -1)
     {
-        LOGF_DEBUG("%d %s", i, value);
+        //LOGF_DEBUG("%d %s", i, value);
         int j = i%1000;
         int myenum = history2[j];
         if(myenum<255)
@@ -878,12 +1116,12 @@ void Astelco::setAnswer(const int i, const char *value)
             }
             else if((myenum-10)==REAL_POSITION)
             {
-                axis[history3[j]][REAL] = atof(value);
+                axis[history3[j]][POSITION_COUNT] = atof(value);
                 sprintf(history[j], "%s", value);
             } 
             else if((myenum-10)==OFFSET)
             {
-                axis[history3[j]][REAL] = atof(value);
+                axis[history3[j]][POSITION_COUNT] = atof(value);
                 sprintf(history[j], "%s", value);
             } 
             else if((myenum-20)==GET)
@@ -908,17 +1146,20 @@ void Astelco::setAnswer(const int i, const char *value)
                     sprintf(history[j], "%s", value);
             //parse somhow 0.0 to 1.0
             } 
-            else if((myenum-30)==history3[j])
+            else if((myenum-30)==history4[j])
             {
-                axis[history3[j]][history4[j]] = atof(value);
                 sprintf(history[j], "%s", value);
+                axis[history3[j]][history4[j]] = atof(value);
             } 
+            else 
+                sprintf(history[j], "%s", value);
         }
         else
             sprintf(history[j], "%s", value);
         // update fields
         IDSetText(&StatusTP, nullptr);
         IDSetText(&PositionTP, nullptr);
+        IDSetText(&StatusMainTP, nullptr);
     }
 }
 
@@ -971,7 +1212,7 @@ IPState Astelco::MoveRelFocuser(const float mm)
     {
         int idx = cmdDeviceInt -1;
         sleep(5*ASTELCO_TIMEOUT);
-        float new_mm = axis[history3[idx]][REAL] + mm;
+        float new_mm = axis[history3[idx]][POSITION_COUNT] + mm;
         if(SetPosition(new_mm, FOCUS))
             return IPS_BUSY;
     }
@@ -991,9 +1232,18 @@ IPState Astelco::OffsetRelFocuser(const float mm)
     {
         int idx = cmdDeviceInt -1;
         sleep(5*ASTELCO_TIMEOUT);
-        float new_mm = axis[history3[idx]][REAL] + mm;
+        float new_mm = axis[history3[idx]][POSITION_COUNT] + mm;
         if(SetOffsetPosition(new_mm, FOCUS))
             return IPS_BUSY;
     }
     return IPS_ALERT;
+}
+
+bool Astelco::MoveRelFocus(const float mm)
+{
+    return MoveRelFocuser(mm)==IPS_BUSY;
+}
+bool Astelco::OffsetRelFocus(const float mm)
+{
+    return OffsetRelFocuser(mm)==IPS_BUSY;
 }
