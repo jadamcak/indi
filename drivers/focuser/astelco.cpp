@@ -222,7 +222,7 @@ bool Astelco::updateProperties()
 
 const char *Astelco::getDefaultName()
 {
-    return static_cast<const char *>("Astelco");
+    return static_cast<const char *>("Astelco Focus");
 }
 
 void Astelco::initHistory(uint8_t val)
@@ -431,71 +431,6 @@ bool Astelco::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             return true;
         }
     }
-
-/*
-    if (!strcmp(name, DeviceSP.name))
-    {
-        IUResetSwitch(&DeviceSP);
-        for (int i = 0; i < DeviceSP.nsp; i++)
-        {
-            if (states[i] != ISS_ON)
-                continue;                
-            if (!strcmp(DeviceS[DOME].name, names[i]))
-            {
-                if (!SetDevice(GetDevice(DOME)))
-                {
-                    DeviceSP.s = IPS_ALERT;
-                    LOGF_ERROR("Failed to switch to %s.",GetDevice(DOME));
-                    deviceSet = false;
-                }
-                else
-                {
-                    DeviceS[DOME].s = ISS_ON;
-                    DeviceS[FOCUS].s = ISS_OFF;
-                    DeviceS[COVER].s = ISS_OFF;
-                    DeviceSP.s = IPS_BUSY;
-                    deviceSet = true;
-                }
-            }
-            else if (!strcmp(DeviceS[FOCUS].name, names[i]))
-            {
-                if (!SetDevice(GetDevice(FOCUS)))
-                {
-                    DeviceSP.s = IPS_ALERT;
-                    LOGF_ERROR("Failed to switch to %s.", GetDevice(FOCUS));
-                    deviceSet = false;
-                }
-                else
-                {
-                    DeviceS[FOCUS].s = ISS_ON;
-                    DeviceS[DOME].s = ISS_OFF;                    
-                    DeviceS[COVER].s = ISS_OFF;
-                    DeviceSP.s = IPS_BUSY;
-                    deviceSet = true;
-                }
-            }
-            else if (!strcmp(DeviceS[COVER].name, names[i]))
-            {
-                if (!SetDevice(GetDevice(COVER)))
-                {
-                    DeviceSP.s = IPS_ALERT;
-                    LOGF_ERROR("Failed to switch to %s.", GetDevice(COVER));
-                    deviceSet = false;
-                }
-                else
-                {
-                    DeviceS[COVER].s = ISS_ON;
-                    DeviceS[DOME].s = ISS_OFF;  
-                    DeviceS[FOCUS].s = ISS_OFF;
-                    DeviceSP.s = IPS_BUSY;
-                    deviceSet = true;
-                }
-            }
-            IDSetSwitch(&DeviceSP, nullptr);
-            return true;
-        }
-    }
- /**/
 
     if (!strcmp(name, PositionSP.name))
     {
@@ -804,15 +739,6 @@ bool Astelco::SetLogin(const char* usr, const char* pas)
     return false;
 }
 
-/*
-bool Astelco::SetDevice(const char* device)
-{
-    if(0<sprintf(cmdDevice, "%s", device))
-        return true;
-    return false;
-}
-/**/
-
 int Astelco::GetWord(const char* cmd, char *word)
 {
     int i = 0;
@@ -915,14 +841,7 @@ bool Astelco::GetUptime()
 bool Astelco::GetPosition(DeviceE dev)
 {
     bool succes = false;
-    /*
-    if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS\n", cmdDeviceInt, GetDevice(dev)))
-    {    
-        setHistories(PositionT[REAL].text, REAL+30, dev, REAL);          
-        succes = sendCommand(cmdString);
-        succes = false;
-    }
-    /**/
+
     if(0<sprintf(cmdString, "%d GET POSITION.INSTRUMENTAL.%s.REALPOS!MIN\n", cmdDeviceInt, GetDevice(dev)))
     {    
         setHistories(PositionT[MIN].text, MIN+30, dev, MIN);           

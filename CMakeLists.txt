@@ -953,17 +953,17 @@ add_executable(indi_celestron_sct_focus ${celestronsct_SRC})
 target_link_libraries(indi_celestron_sct_focus indidriver)
 install(TARGETS indi_celestron_sct_focus RUNTIME DESTINATION bin)
 
-########### Astelco Driver ###############
+########### Astelco Focus Driver ###############
 
-SET(astelco_SRC ${CMAKE_CURRENT_SOURCE_DIR}/drivers/focuser/astelco.cpp)
+SET(astelco_focus_SRC ${CMAKE_CURRENT_SOURCE_DIR}/drivers/focuser/astelco.cpp)
 
 IF (UNITY_BUILD)
-    ENABLE_UNITY_BUILD(astelco astelco_SRC 10 cpp)
+    ENABLE_UNITY_BUILD(astelco_focus astelco_focus_SRC 10 cpp)
 ENDIF ()
 
-add_executable(indi_astelco ${astelco_SRC})
-target_link_libraries(indi_astelco indidriver)
-install(TARGETS indi_astelco RUNTIME DESTINATION bin)
+add_executable(indi_astelco_focus ${astelco_focus_SRC})
+target_link_libraries(indi_astelco_focus indidriver)
+install(TARGETS indi_astelco_focus RUNTIME DESTINATION bin)
 
 ################ AAF2 Focuser ################
 
@@ -1446,6 +1446,17 @@ add_executable(indi_ddw_dome ${ddw_dome_SRCS})
 target_link_libraries(indi_ddw_dome indidriver)
 install(TARGETS indi_ddw_dome RUNTIME DESTINATION bin )
 
+########### Astelco Dome Driver ###############
+
+SET(astelco_dome_SRC ${CMAKE_CURRENT_SOURCE_DIR}/drivers/dome/astelco.cpp)
+
+IF (UNITY_BUILD)
+    ENABLE_UNITY_BUILD(astelco_dome astelco_dome_SRC 10 cpp)
+ENDIF ()
+
+add_executable(indi_astelco_dome ${astelco_dome_SRC})
+target_link_libraries(indi_astelco_dome indidriver)
+install(TARGETS indi_astelco_dome RUNTIME DESTINATION bin)
 
 ########### Dome Scripting Gateway ##############
 SET(domescript_SRC

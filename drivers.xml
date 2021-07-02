@@ -287,8 +287,8 @@
             <driver name="Celestron SCT">indi_celestron_sct_focus</driver>
             <version>1.0</version>
         </device>
-        <device label="Astelco" manufacturer="ASTRO.SK">
-            <driver name="Astelco">indi_astelco</driver>
+        <device label="Astelco Focus" manufacturer="ASTRO.SK">
+            <driver name="Astelco Focus">indi_astelco_focus</driver>
             <version>1.0</version>
         </device>
         <device label="AAF2">
@@ -595,6 +595,10 @@
         </device>
         <device label="DDW Dome" manufacturer="Technical Innovations">
             <driver name="DDW Dome">indi_ddw_dome</driver>
+            <version>1.0</version>
+        </device>
+        <device label="Astelco Dome" manufacturer="ASTRO.SK">
+            <driver name="Astelco Dome">indi_astelco_dome</driver>
             <version>1.0</version>
         </device>
         <device label="Baader Dome" manufacturer="Baader">

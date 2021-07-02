@@ -245,7 +245,7 @@ bool Astelco::updateProperties()
 
 const char *Astelco::getDefaultName()
 {
-    return static_cast<const char *>("Astelco");
+    return static_cast<const char *>("Astelco Dome");
 }
 
 void Astelco::initHistory(uint8_t val)
